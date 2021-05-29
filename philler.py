@@ -4,14 +4,14 @@ import argparse
 import traceback
 import coloredlogs, logging
 from threading import Lock, Event
-import serial
-
 
 from PyQt5 import QtCore, QtWidgets, uic
 from PyQt5.QtWidgets import QMessageBox, QLabel, QPushButton, QToolButton, QCheckBox, QFileDialog, QTableWidgetItem, QStyledItemDelegate
 from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QPen, QColor, QImage, QPixmap
 
+from Hardware import Filler
+from Sequencer import Sequencer
 
 # -------------------------------------------------------------------------
 # Set up the base logger
@@ -54,73 +54,6 @@ def showDialog(text, yes=False, cancel=False):
         return True
     else:
         return False
-
-
-
-class FillingHardware(QObject):
-
-    finished = pyqtSignal()
-    progress = pyqtSignal(int)
-
-    def __init__(self, *args, **kwargs):
-
-        QObject.__init__(self, *args, **kwargs)
-
-        # Task properties
-        self.tickrate = 0.1
-        self._stop = Event()
-        self._stop.clear()
-
-    def ioDriver(self):
-        log.debug('pass')
-
-
-    @property
-    def stopping(self):
-        return self._stop.isSet()
-
-    def stop(self):
-        self._stop.set()
-
-    def baz(self):
-        #ser.write(b'*IDN?\n')
-        # ser.write(b'ERR?\n')
-        pass
-
-    def run(self):
-        """
-        Main thread loop.
-        """
-        i = 0
-        ser = serial.Serial('/dev/ttyUSB0', 19200, timeout=0.5)
-
-        log.debug('Device thread running.')
-        while not self._stop.wait(self.tickrate):
-
-            i += 1
-            self.progress.emit(i)
-
-            try:
-                # Run the hardware interface
-                #self.ioDriver()
-
-                #s = ser.read(100)
-                s = ser.read_until('\n')
-                log.debug(s)
-
-
-            except Exception as e:
-                log.critical(f'Exception during processing: {e}')
-                log.critical(traceback.print_tb(e.__traceback__))
-
-        ser.close()
-
-        self.finished.emit()
-        log.debug('Device thread stopped.')
-
-
-
-
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -225,15 +158,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.thread = QThread()
 
         # Filling device hardware
-        self.hw = FillingHardware()
+        self.filler = Filler()
 
         # Move worker to the thread
-        self.hw.moveToThread(self.thread)
+        self.filler.moveToThread(self.thread)
 
         # Connect signals and slots
-        self.thread.started.connect(self.hw.run)
-        self.hw.finished.connect(self.thread.quit)
-        self.hw.finished.connect(self.hw.deleteLater)
+        self.thread.started.connect(self.filler.run)
+        self.filler.finished.connect(self.thread.quit)
+        self.filler.finished.connect(self.filler.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
         #self.hw.progress.connect(self.reportProgress)
 
