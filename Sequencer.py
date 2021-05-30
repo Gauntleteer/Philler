@@ -84,10 +84,12 @@ class Sequencer(QObject):
     def stop(self):
         self._stop.set()
 
-    def start(self):
+    def main(self):
         """
         Main thread loop.
         """
+        log.debug('Sequencer thread running.')
+
         hb = 0
 
         self.info(f'Sequencer starting.')
