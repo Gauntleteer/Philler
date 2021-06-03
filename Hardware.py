@@ -86,7 +86,10 @@ class Filler(QObject):
     def read(self):
         """Read from the serial port and parse the fields out"""
         if self.ser is None:
-            self.ser = serial.Serial(self.port, self.baudrate, timeout=0.05)
+            try:
+                self.ser = serial.Serial(self.port, self.baudrate, timeout=0.05)
+            except serial.SerialException:
+                return
 
         # Read a line from the Arduino
         #s = self.ser.read_until('\r\n')
