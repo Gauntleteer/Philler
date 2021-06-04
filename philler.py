@@ -118,6 +118,7 @@ class MainWindow(QtWidgets.QMainWindow):
         l_weight                  = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_weight_neg              = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_weight_g                = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        b_shutdown                = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
 
         def __init__(self, form):
             """
@@ -178,7 +179,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.w = self.RefWidgets(self)
 
         self.setupUi()
-        self.show()
+        #self.show()
+        self.showFullScreen()
 
     # -----------------------------------------------------------------------------
     def setupUi(self):
@@ -219,9 +221,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.seq.finished.connect(self.seq.deleteLater)
         self.seqThread.finished.connect(self.seqThread.deleteLater)
 
+        self.w.b_shutdown.clicked.connect(QtWidgets.qApp.quit)
+
         # Start the threads
         self.fillerThread.start()
         self.seqThread.start()
+
+
 
 
     def goPressed(self):
