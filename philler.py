@@ -118,7 +118,7 @@ class MainWindow(QtWidgets.QMainWindow):
         l_weight                  = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_weight_neg              = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_weight_g                = QtWidgets.QLabel               # type: QtWidgets.QLabel
-        b_shutdown                = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        b_main_shutdown           = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
 
         def __init__(self, form):
             """
@@ -221,7 +221,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.seq.finished.connect(self.seq.deleteLater)
         self.seqThread.finished.connect(self.seqThread.deleteLater)
 
-        self.w.b_shutdown.clicked.connect(QtWidgets.qApp.quit)
+        self.w.b_main_shutdown.clicked.connect(QtWidgets.qApp.quit)
 
         # Start the threads
         self.fillerThread.start()
