@@ -62,6 +62,9 @@ class Sequencer(QObject):
     @property
     def terminated(self): return self.state == self._states(len(self._states)-1) # The terminal state is the last in the enum
 
+    @property
+    def stateName(self): return self.state.name
+
     def _procstate(self):
         """
         Generic method called to process the state machine.  Do not call directly.

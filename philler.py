@@ -1,15 +1,13 @@
-import math
 import sys
 import os
 import random
 import argparse
-import traceback
 import coloredlogs, logging
 from threading import Lock, Event
 from enum import Enum, auto
 
 from PyQt5 import QtCore, QtWidgets, uic, QtMultimedia
-from PyQt5.QtWidgets import QMessageBox, QLabel, QPushButton, QToolButton, QCheckBox, QFileDialog, QTableWidgetItem, QStyledItemDelegate
+from PyQt5.QtWidgets import QMessageBox, QLabel, QPushButton, QToolButton, QGridLayout
 from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QPen, QColor, QImage, QPixmap
 
@@ -27,7 +25,6 @@ log = logging.getLogger('')
 # Disable the debug logging from Qt
 logging.getLogger('PyQt5').setLevel(logging.WARNING)
 
-
 class PAGES(Enum):
     """
     The pages in the application.
@@ -36,7 +33,6 @@ class PAGES(Enum):
     DIAG = auto()
     FILL = auto()
     CLEAN= auto()
-
 
 def showDialog(text, yes=False, cancel=False):
     """
@@ -76,14 +72,59 @@ class FillingSequencer(Sequencer):
         """
         The state machine will enter on the 0th state, and when it reaches the final state it will terminate.
         """
-        UNINIT       = 0 # Start numbering at 0
-        STANDBY      = auto()
-        IDLE         = auto()
-        FAULT        = auto()
-        TERMINATED   = auto()
+        UNINIT                      = 0 # Start numbering at 0
 
-    def __init__(self):
+        # Main screens
+        STANDBY                     = auto()
+        DIAGNOSTICS                 = auto()
+
+        # Bottle filling sequence
+        FILL_START1                 = auto()
+        FILL_START1_WAIT            = auto()
+        FILL_START2                 = auto()
+        FILL_START2_WAIT            = auto()
+        FILL_START3                 = auto()
+        FILL_START3_WAIT            = auto()
+        FILL_PRESSURIZE             = auto()
+        FILL_PRESSURIZE_WAIT        = auto()
+        FILL_PURGE_SETUP            = auto()
+        FILL_PURGE_SETUP_WAIT       = auto()
+        FILL_READY                  = auto()
+        FILL_READY_WAIT             = auto()
+        FILL_FILLING                = auto()
+        FILL_FILLING_WAIT           = auto()
+        FILL_FILLING_RESET          = auto()
+        FILL_FILLING_RESET_WAIT     = auto()
+        FILL_END                    = auto()
+        FILL_END_WAIT               = auto()
+        FILL_TERMINATE              = auto()
+
+        # Cleaning sequence
+        CLEAN_START1                = auto()
+        CLEAN_START1_WAIT           = auto()
+        CLEAN_START2                = auto()
+        CLEAN_START2_WAIT           = auto()
+        CLEAN_START3                = auto()
+        CLEAN_START3_WAIT           = auto()
+        CLEAN_PRESSURIZE            = auto()
+        CLEAN_PRESSURIZE_WAIT       = auto()
+        CLEAN_READY                 = auto()
+        CLEAN_READY_WAIT            = auto()
+        CLEAN_CLEANING              = auto()
+        CLEAN_CLEANING_WAIT         = auto()
+        CLEAN_END                   = auto()
+        CLEAN_END_WAIT              = auto()
+        CLEAN_TERMINATE             = auto()
+
+        # Failure/terminal states
+        FAULT                       = auto()
+        TERMINATED                  = auto()
+
+    def __init__(self, filler):
         super(FillingSequencer, self).__init__()
+
+        # Retain a reference to the filler hardware
+        self.filler = filler
 
         # Setup the sequencer with the states we plan to use
         self.prepare(self.STATES)
@@ -93,18 +134,147 @@ class FillingSequencer(Sequencer):
         self.connecttimer.start(minutes=1)
         self.connecttimer.expire()
 
-    def process_UNINIT(self):
-        # Clear any start request
-        #self.seqrequest = ''
+    # -------------------------------------------------------------------------
+    def requestState(self, newState):
+        """Handle the external request to transition to a state"""
 
+        if newState in self.STATES:
+
+            if newState == self.STATES.STANDBY:
+                # Going back to standby, turn off anything that might be running
+                self.to_STANDBY()
+
+            if newState == self.STATES.DIAGNOSTICS:
+                self.to_DIAGNOSTICS()
+
+            if newState == self.STATES.FAULT:
+                # Going to fault: turn off anything that might be running
+                self.to_FAULT()
+
+
+            return True, ''
+
+        else:
+            return False, 'Invalid state requested!'
+
+    # -------------------------------------------------------------------------
+    def process_UNINIT(self):
+        """Process any init items"""
         self.to_STANDBY()
 
+    # -------------------------------------------------------------------------
     def process_STANDBY(self):
-        self.to_IDLE()
-
-    def process_IDLE(self):
         pass
 
+    # -------------------------------------------------------------------------
+    def process_DIAGNOSTICS(self):
+        pass
+
+    # -------------------------------------------------------------------------
+    def process_FILL_START1(self):
+        pass
+
+    def process_FILL_START1_WAIT(self):
+        pass
+
+    def process_FILL_START2(self):
+        pass
+
+    def process_FILL_START2_WAIT(self):
+        pass
+
+    def process_FILL_START3(self):
+        pass
+
+    def process_FILL_START3_WAIT(self):
+        pass
+
+    def process_FILL_PRESSURIZE(self):
+        pass
+
+    def process_FILL_PRESSURIZE_WAIT(self):
+        pass
+
+    def process_FILL_PURGE_SETUP(self):
+        pass
+
+    def process_FILL_PURGE_SETUP_WAIT(self):
+        pass
+
+    def process_FILL_READY(self):
+        pass
+
+    def process_FILL_READY_WAIT(self):
+        pass
+
+    def process_FILL_FILLING(self):
+        pass
+
+    def process_FILL_FILLING_WAIT(self):
+        pass
+
+    def process_FILL_FILLING_RESET(self):
+        pass
+
+    def process_FILL_FILLING_RESET_WAIT(self):
+        pass
+
+    def process_FILL_END(self):
+        pass
+
+    def process_FILL_END_WAIT(self):
+        pass
+
+    def process_FILL_TERMINATE(self):
+        pass
+
+    # -------------------------------------------------------------------------
+    def process_CLEAN_START1(self):
+        pass
+
+    def process_CLEAN_START1_WAIT(self):
+        pass
+
+    def process_CLEAN_START2(self):
+        pass
+
+    def process_CLEAN_START2_WAIT(self):
+        pass
+
+    def process_CLEAN_START3(self):
+        pass
+
+    def process_CLEAN_START3_WAIT(self):
+        pass
+
+    def process_CLEAN_PRESSURIZE(self):
+        pass
+
+    def process_CLEAN_PRESSURIZE_WAIT(self):
+        pass
+
+    def process_CLEAN_READY(self):
+        pass
+
+    def process_CLEAN_READY_WAIT(self):
+        pass
+
+    def process_CLEAN_CLEANING(self):
+        pass
+
+    def process_CLEAN_CLEANING_WAIT(self):
+        pass
+
+    def process_CLEAN_END(self):
+        pass
+
+    def process_CLEAN_END_WAIT(self):
+        pass
+
+    def process_CLEAN_TERMINATE(self):
+        pass
+
+    # -------------------------------------------------------------------------
     def process_FAULT(self):
         pass
 
@@ -249,7 +419,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.filler.changed.connect(self.onUpdate)
 
         # Filling device hardware
-        self.seq = FillingSequencer()
+        self.seq = FillingSequencer(filler=self.filler)
         self.seqThread = QThread()
         self.seq.moveToThread(self.seqThread)
         self.seqThread.started.connect(self.seq.main)
@@ -266,12 +436,20 @@ class MainWindow(QtWidgets.QMainWindow):
         # Define a timer to periodically update screen widgets
         self.statusTimer = QTimer()
         self.statusTimer.timeout.connect(self.checkStatus)
-        self.statusTimer.start(500)
+        self.statusTimer.start(100)
 
 
         # Start out on the main page
         self.w.sw_pages.setCurrentIndex(0)
         self.selectPanel(PAGES.MAIN)
+
+
+
+
+        # Add a state name to the status bar
+        self.l_state = QtWidgets.QLabel()
+        self.l_state.setText(self.seq.stateName)
+        self.w.statusbar.addPermanentWidget(self.l_state, stretch=1)
 
         # Add a connection status light to the status bar
         self.l_connected = QtWidgets.QLabel()
@@ -279,14 +457,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.l_connected.setStyleSheet('color: red')
         self.w.statusbar.addPermanentWidget(self.l_connected)
 
+
         # Hook the navigation buttons
         self.w.b_main_fill_bottles.clicked.connect(lambda: self.selectPanel(PAGES.FILL))
         self.w.b_main_clean_system.clicked.connect(lambda: self.selectPanel(PAGES.CLEAN))
-        self.w.b_main_diagnostics.clicked.connect(lambda: self.selectPanel(PAGES.DIAG))
 
         self.w.b_fill_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
         self.w.b_clean_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
-        self.w.b_diag_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
+
+
+        # Diagnostics panel
+        self.w.b_main_diagnostics.clicked.connect(self.clickedDiagnostics)
+        self.w.b_diag_back.clicked.connect(self.clickedExitDiagnostics)
         self.w.b_diag_sound_test.clicked.connect(self.play)
 
     def selectPanel(self, panel):
@@ -317,6 +499,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def checkStatus(self):
+        self.l_state.setText('  STATE: ' + self.seq.stateName)
 
         if self.filler.connected:
             self.l_connected.setText('CONNECTED')
@@ -333,6 +516,35 @@ class MainWindow(QtWidgets.QMainWindow):
             QtMultimedia.QSound.play('bell.wav')
         else:
             QtMultimedia.QSound.play('agogo.wav')
+
+
+    def clickedDiagnostics(self):
+        """Handle the user clicking on the diagnostics button"""
+
+        # Tell the state machine to enter the diagnostics state
+        success, message = self.seq.requestState(self.seq.STATES.DIAGNOSTICS)
+
+        if success:
+            # Allow the display of the diagnostics page
+            self.selectPanel(PAGES.DIAG)
+
+
+        else:
+            # Tell the user something went wrong
+            showDialog(message)
+
+    def clickedExitDiagnostics(self):
+        # Tell the state machine to enter the standby state
+        success, message = self.seq.requestState(self.seq.STATES.STANDBY)
+
+        if success:
+            # Allow the display of the main page
+            self.selectPanel(PAGES.MAIN)
+
+        else:
+            # Tell the user something went wrong
+            showDialog(message)
+
 
 # end of class MainWindow
 
