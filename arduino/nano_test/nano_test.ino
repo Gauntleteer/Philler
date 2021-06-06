@@ -1,6 +1,6 @@
 char s[32];
 float foo;
-int bar;
+unsigned int pressure = 100;
 
 char foos[10];
 
@@ -11,7 +11,6 @@ void setup() {
 
   Serial.begin(19200);  // opens serial port, sets data rate to 19,200 bps
   foo = -0.2;
-  bar = 0;  
 }
 
 // the loop function runs over and over again forever
@@ -20,16 +19,19 @@ void loop() {
   while (1) {
   
     foo = foo + 0.01;
-    bar = bar + 1;
+    pressure = pressure + 1;
+    if (pressure > 900) {
+      pressure = 100;
+    }
   
     //snprintf(s, sizeof(s), "x;y;z;%f\n", foo);  
 
     dtostrf(foo, 5, 2, foos);
     
     if (foo > 0) {
-      sprintf(s, "+%sg;%d;s;f", foos, bar);
+      sprintf(s, "+%sg;%d;s;f", foos, pressure);
     } else {
-      sprintf(s, "%sg;%d;s;f", foos, bar);
+      sprintf(s, "%sg;%d;s;f", foos, pressure);
     }
 
     Serial.println(s);

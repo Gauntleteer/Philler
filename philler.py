@@ -26,6 +26,16 @@ log = logging.getLogger('')
 logging.getLogger('PyQt5').setLevel(logging.WARNING)
 
 
+class PAGES(Enum):
+    """
+    The pages in the application.
+    """
+    MAIN = 0  # Start numbering at 0
+    DIAG = auto()
+    FILL = auto()
+    CLEAN= auto()
+
+
 def showDialog(text, yes=False, cancel=False):
     """
     Show a message box to the user.
@@ -114,11 +124,35 @@ class MainWindow(QtWidgets.QMainWindow):
         # not an instance.
 
         # Name                      Type (for locating)              Type (forced for PyCharm type hinting only)
-        b_go                      = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+
+        # Main panel
+        sw_pages                  = QtWidgets.QStackedWidget       # type: QtWidgets.QStackedWidget
+        b_main_fill_bottles       = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        b_main_clean_system       = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        b_main_diagnostics        = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        b_main_shutdown           = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        statusbar                 = QtWidgets.QStatusBar           # type: QtWidgets.QStatusBar
+
+        # Fill bottles panel
+        b_fill_back               = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+
+        # Clean system panel
+        b_clean_back              = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+
+        # Diagnostics panel
+        l_diag_foot_switch        = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        l_diag_stop_switch        = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        l_diag_pressure_valve     = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        l_diag_pressure_value     = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        l_diag_weight_value       = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        b_diag_back               = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+
+
+        #b_go                      = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+
         l_weight                  = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_weight_neg              = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_weight_g                = QtWidgets.QLabel               # type: QtWidgets.QLabel
-        b_main_shutdown           = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
 
         def __init__(self, form):
             """
@@ -199,7 +233,7 @@ class MainWindow(QtWidgets.QMainWindow):
         quit.setStatusTip('Quit application')
         quit.triggered.connect(QtWidgets.qApp.quit)
 
-        self.w.b_go.pressed.connect(self.goPressed)
+        #self.w.b_go.pressed.connect(self.goPressed)
 
         # Filling device hardware
         self.filler = Filler()
@@ -227,18 +261,65 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fillerThread.start()
         self.seqThread.start()
 
+        # Define a timer to periodically update screen widgets
+        self.statusTimer = QTimer()
+        self.statusTimer.timeout.connect(self.checkStatus)
+        self.statusTimer.start(500)
 
 
+        # Start out on the main page
+        self.w.sw_pages.setCurrentIndex(0)
+        self.selectPanel(PAGES.MAIN)
+
+        # Add a connection status light to the status bar
+        self.l_connected = QtWidgets.QLabel()
+        self.l_connected.setText('TEXT')
+        self.l_connected.setStyleSheet('color: red')
+        self.w.statusbar.addPermanentWidget(self.l_connected)
+
+        # Hook the navigation buttons
+        self.w.b_main_fill_bottles.clicked.connect(lambda: self.selectPanel(PAGES.FILL))
+        self.w.b_main_clean_system.clicked.connect(lambda: self.selectPanel(PAGES.CLEAN))
+        self.w.b_main_diagnostics.clicked.connect(lambda: self.selectPanel(PAGES.DIAG))
+
+        self.w.b_fill_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
+        self.w.b_clean_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
+        self.w.b_diag_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
+
+    def selectPanel(self, panel):
+        """Select one of the stacked panels"""
+        self.w.sw_pages.setCurrentIndex(panel.value)
 
     def goPressed(self):
         showDialog('GO!')
 
     def onUpdate(self):
-        val = self.filler.weight
-        if val > 0:
+        """Update the widgets that display values from the filler device"""
+        weight_val = self.filler.weight
+        pressure_val = self.filler.pressure
+
+        # Diagnostics page
+        self.w.l_diag_weight_value.setText(f'{weight_val:03.2f} g')
+        self.w.l_diag_pressure_value.setText(f'{pressure_val:03.2f} psi')
+
+
+        # Fill bottles page
+        if weight_val > 0:
             self.w.l_weight_neg.setText('')
 
-        self.w.l_weight.setText(f'{abs(val):03.2f}')
+        self.w.l_weight.setText(f'{abs(weight_val):03.2f}')
+
+
+
+    def checkStatus(self):
+
+        if self.filler.connected:
+            self.l_connected.setText('CONNECTED')
+            self.l_connected.setStyleSheet('color: green')
+
+        else:
+            self.l_connected.setText('DISCONNECTED')
+            self.l_connected.setStyleSheet('color: red')
 
 
 
