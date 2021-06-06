@@ -1,13 +1,14 @@
+import math
 import sys
 import os
-import pygame
+import random
 import argparse
 import traceback
 import coloredlogs, logging
 from threading import Lock, Event
 from enum import Enum, auto
 
-from PyQt5 import QtCore, QtWidgets, uic
+from PyQt5 import QtCore, QtWidgets, uic, QtMultimedia
 from PyQt5.QtWidgets import QMessageBox, QLabel, QPushButton, QToolButton, QCheckBox, QFileDialog, QTableWidgetItem, QStyledItemDelegate
 from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QPen, QColor, QImage, QPixmap
@@ -18,7 +19,7 @@ from CountdownTimer import CountdownTimer
 
 # -------------------------------------------------------------------------
 # Start the sound subsystem
-pygame.init()
+#pygame.init()
 
 # -------------------------------------------------------------------------
 # Set up the base logger
@@ -208,9 +209,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.popups = {}
         self.template = None
 
-        # Make access to data be thread safe with a mutex (chart data, in particular)
-        self._mutex = QtCore.QMutex()
-
         QtWidgets.QMainWindow.__init__(self, *args, **kwargs)
 
         # Load the UI file
@@ -221,8 +219,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.w = self.RefWidgets(self)
 
         self.setupUi()
-        #self.show()
-        self.showFullScreen()
+        self.show()
+        #self.showFullScreen()
 
     # -----------------------------------------------------------------------------
     def setupUi(self):
@@ -318,7 +316,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.w.l_weight.setText(f'{abs(weight_val):03.2f}')
 
-        self.w.pb_pressure.setValue(pressure_val)
+        self.w.pb_pressure.setValue(round(pressure_val))
 
 
 
@@ -333,8 +331,18 @@ class MainWindow(QtWidgets.QMainWindow):
             self.l_connected.setStyleSheet('color: red')
 
     def play(self):
-        pygame.mixer.Sound('agogo.ogg').play()
+        x = random.random()
 
+        if x > 0.5:
+            QtMultimedia.QSound.play('bell.wav')
+        else:
+            QtMultimedia.QSound.play('agogo.wav')
+
+
+
+    #def close(self) -> bool:
+    #    pygame.quit()
+    #    return True
 
 
 
