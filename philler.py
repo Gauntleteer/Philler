@@ -1,5 +1,6 @@
 import sys
 import os
+import pygame
 import argparse
 import traceback
 import coloredlogs, logging
@@ -14,6 +15,10 @@ from PyQt5.QtGui import QIcon, QPen, QColor, QImage, QPixmap
 from Hardware import Filler
 from Sequencer import Sequencer
 from CountdownTimer import CountdownTimer
+
+# -------------------------------------------------------------------------
+# Start the sound subsystem
+pygame.init()
 
 # -------------------------------------------------------------------------
 # Set up the base logger
@@ -148,6 +153,7 @@ class MainWindow(QtWidgets.QMainWindow):
         l_diag_pressure_value     = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_diag_weight_value       = QtWidgets.QLabel               # type: QtWidgets.QLabel
         b_diag_back               = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        b_diag_sound_test         = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
 
 
         #b_go                      = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
@@ -287,6 +293,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.w.b_fill_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
         self.w.b_clean_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
         self.w.b_diag_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
+        self.w.b_diag_sound_test.clicked.connect(self.play)
 
     def selectPanel(self, panel):
         """Select one of the stacked panels"""
@@ -325,7 +332,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.l_connected.setText('DISCONNECTED')
             self.l_connected.setStyleSheet('color: red')
 
-
+    def play(self):
+        pygame.mixer.Sound('agogo.ogg').play()
 
 
 
