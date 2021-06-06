@@ -36,7 +36,7 @@
     <item row="0" column="0">
      <widget class="QStackedWidget" name="sw_pages">
       <property name="frameShape">
-       <enum>QFrame::Box</enum>
+       <enum>QFrame::NoFrame</enum>
       </property>
       <property name="currentIndex">
        <number>1</number>
@@ -185,12 +185,45 @@ DOWN</string>
           <property name="spacing">
            <number>20</number>
           </property>
-          <item row="1" column="1">
-           <widget class="QLabel" name="l_diag_stop_switch">
+          <item row="7" column="1">
+           <widget class="QPushButton" name="b_diag_pressure_off">
+            <property name="font">
+             <font>
+              <family>Montserrat Medium</family>
+              <pointsize>45</pointsize>
+             </font>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(0, 0, 255)</string>
+            </property>
+            <property name="text">
+             <string>ON</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0" rowspan="2">
+           <widget class="QLabel" name="label_6">
             <property name="font">
              <font>
               <family>Montserrat Medium</family>
               <pointsize>25</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Air valve
+control</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <widget class="QPushButton" name="b_diag_pressure_on">
+            <property name="font">
+             <font>
+              <family>Montserrat Medium</family>
+              <pointsize>45</pointsize>
              </font>
             </property>
             <property name="styleSheet">
@@ -201,42 +234,19 @@ DOWN</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="0">
-           <widget class="QToolButton" name="b_diag_back">
-            <property name="styleSheet">
-             <string notr="true">QToolButton {  
-    border: 0px;
-}
-</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset>
-              <normaloff>back.png</normaloff>back.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>80</width>
-              <height>80</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label">
+          <item row="3" column="1">
+           <widget class="QLabel" name="l_diag_weight_value">
             <property name="font">
              <font>
               <family>Montserrat Medium</family>
               <pointsize>25</pointsize>
              </font>
             </property>
-            <property name="text">
-             <string>Stop switch</string>
+            <property name="styleSheet">
+             <string notr="true">color: rgb(0, 0, 255)</string>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <property name="text">
+             <string>123.45</string>
             </property>
            </widget>
           </item>
@@ -262,39 +272,7 @@ DOWN</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="font">
-             <font>
-              <family>Montserrat Medium</family>
-              <pointsize>25</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Pressure value</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLabel" name="l_diag_pressure_value">
-            <property name="font">
-             <font>
-              <family>Montserrat Medium</family>
-              <pointsize>25</pointsize>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">color: rgb(0, 0, 255)</string>
-            </property>
-            <property name="text">
-             <string>12psi</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
+          <item row="4" column="1">
            <widget class="QLabel" name="l_diag_pressure_valve">
             <property name="font">
              <font>
@@ -310,19 +288,87 @@ DOWN</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
-           <widget class="QPushButton" name="b_diag_pressure_off">
+          <item row="2" column="1">
+           <widget class="QLabel" name="l_diag_pressure_value">
             <property name="font">
              <font>
               <family>Montserrat Medium</family>
-              <pointsize>45</pointsize>
+              <pointsize>25</pointsize>
              </font>
             </property>
             <property name="styleSheet">
              <string notr="true">color: rgb(0, 0, 255)</string>
             </property>
             <property name="text">
-             <string>ON</string>
+             <string>12psi</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="0">
+           <spacer name="verticalSpacer">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="font">
+             <font>
+              <family>Montserrat Medium</family>
+              <pointsize>25</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Air valve</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="font">
+             <font>
+              <family>Montserrat Medium</family>
+              <pointsize>25</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Weight value</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="0">
+           <widget class="QToolButton" name="b_diag_back">
+            <property name="styleSheet">
+             <string notr="true">QToolButton {  
+    border: 0px;
+}
+</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>back.png</normaloff>back.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>80</width>
+              <height>80</height>
+             </size>
             </property>
            </widget>
           </item>
@@ -342,8 +388,24 @@ DOWN</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
-           <widget class="QLabel" name="l_diag_weight_value">
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_5">
+            <property name="font">
+             <font>
+              <family>Montserrat Medium</family>
+              <pointsize>25</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Pressure value</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLabel" name="l_diag_stop_switch">
             <property name="font">
              <font>
               <family>Montserrat Medium</family>
@@ -354,12 +416,12 @@ DOWN</string>
              <string notr="true">color: rgb(0, 0, 255)</string>
             </property>
             <property name="text">
-             <string>123.45</string>
+             <string>OFF</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_4">
+          <item row="1" column="0">
+           <widget class="QLabel" name="label">
             <property name="font">
              <font>
               <family>Montserrat Medium</family>
@@ -367,30 +429,14 @@ DOWN</string>
              </font>
             </property>
             <property name="text">
-             <string>Weight value</string>
+             <string>Stop switch</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="font">
-             <font>
-              <family>Montserrat Medium</family>
-              <pointsize>25</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Pressure valve</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="1">
+          <item row="8" column="1">
            <spacer name="verticalSpacer_2">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -403,48 +449,16 @@ DOWN</string>
             </property>
            </spacer>
           </item>
-          <item row="7" column="0">
-           <spacer name="verticalSpacer">
+          <item row="5" column="0" colspan="2">
+           <widget class="Line" name="line">
+            <property name="frameShadow">
+             <enum>QFrame::Sunken</enum>
+            </property>
+            <property name="lineWidth">
+             <number>1</number>
+            </property>
             <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item row="5" column="1">
-           <widget class="QPushButton" name="b_diag_pressure_on">
-            <property name="font">
-             <font>
-              <family>Montserrat Medium</family>
-              <pointsize>45</pointsize>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">color: rgb(0, 0, 255)</string>
-            </property>
-            <property name="text">
-             <string>OFF</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0" rowspan="2">
-           <widget class="QLabel" name="label_6">
-            <property name="font">
-             <font>
-              <family>Montserrat Medium</family>
-              <pointsize>25</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Pressure switch</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
