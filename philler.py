@@ -18,10 +18,6 @@ from Sequencer import Sequencer
 from CountdownTimer import CountdownTimer
 
 # -------------------------------------------------------------------------
-# Start the sound subsystem
-#pygame.init()
-
-# -------------------------------------------------------------------------
 # Set up the base logger
 coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s [%(levelname)s] %(message)s'
 coloredlogs.DEFAULT_DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
@@ -338,22 +334,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             QtMultimedia.QSound.play('agogo.wav')
 
-
-
-    #def close(self) -> bool:
-    #    pygame.quit()
-    #    return True
-
-
-
 # end of class MainWindow
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
