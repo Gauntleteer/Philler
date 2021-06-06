@@ -4,7 +4,8 @@ import random
 import argparse
 import coloredlogs, logging
 from threading import Lock, Event
-from enum import Enum, auto
+from enum import Enum, auto, IntEnum
+from queue import Queue, SimpleQueue
 
 from PyQt5 import QtCore, QtWidgets, uic, QtMultimedia
 from PyQt5.QtWidgets import QMessageBox, QLabel, QPushButton, QToolButton, QGridLayout
@@ -68,7 +69,7 @@ def showDialog(text, yes=False, cancel=False):
 
 class FillingSequencer(Sequencer):
 
-    class STATES(Enum):
+    class STATES(IntEnum):
         """
         The state machine will enter on the 0th state, and when it reaches the final state it will terminate.
         """
@@ -120,6 +121,26 @@ class FillingSequencer(Sequencer):
         FAULT                       = auto()
         TERMINATED                  = auto()
 
+    class BUTTONS(IntEnum):
+        """Button inputs from the user"""
+
+        # Common actions
+        EXIT                        = 0
+        ABORT                       = auto()
+
+        # Main screen
+        MAIN_ENTER_FILL             = auto()
+        MAIN_ENTER_CLEAN            = auto()
+        MAIN_ENTER_DIAGNOSTICS      = auto()
+
+        # Fill screen
+
+        # Clean screen
+
+        # Diagnostics screen
+
+
+
     def __init__(self, filler):
         super(FillingSequencer, self).__init__()
 
@@ -133,6 +154,16 @@ class FillingSequencer(Sequencer):
         self.connecttimer = CountdownTimer()
         self.connecttimer.start(minutes=1)
         self.connecttimer.expire()
+
+        # A queue for requests from the user
+        self.requests = SimpleQueue()
+
+    # -------------------------------------------------------------------------
+    def request(self, button):
+        """Create request to the state machine based on a button press"""
+        self.requests.put(button, block=False)
+
+
 
     # -------------------------------------------------------------------------
     def requestState(self, newState):
@@ -159,120 +190,197 @@ class FillingSequencer(Sequencer):
 
     # -------------------------------------------------------------------------
     def process_UNINIT(self):
-        """Process any init items"""
+        """Process any init items here"""
         self.to_STANDBY()
 
     # -------------------------------------------------------------------------
     def process_STANDBY(self):
-        pass
+
+        # Transition the user to the various main screens
+        req = self.requests.get()
+
+        if req in [self.BUTTONS.MAIN_ENTER_FILL]:
+            self.to_FILL_START1()
+        elif req in [self.BUTTONS.MAIN_ENTER_CLEAN]:
+            self.to_CLEAN_START1()
+        elif req in [self.BUTTONS.MAIN_ENTER_DIAGNOSTICS]:
+            self.to_DIAGNOSTICS()
 
     # -------------------------------------------------------------------------
     def process_DIAGNOSTICS(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_STANDBY()
 
     # -------------------------------------------------------------------------
     def process_FILL_START1(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_START1_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_START2(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_START2_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_START3(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_START3_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_PRESSURIZE(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_PRESSURIZE_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_PURGE_SETUP(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_PURGE_SETUP_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_READY(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_READY_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_FILLING(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_FILLING_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_FILLING_RESET(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_FILLING_RESET_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_END(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_END_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_FILL_TERMINATE()
 
     def process_FILL_TERMINATE(self):
-        pass
+        log.info('Terminating fill sequence.')
+        self.to_STANDBY()
 
     # -------------------------------------------------------------------------
     def process_CLEAN_START1(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_START1_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_START2(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_START2_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_START3(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_START3_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_PRESSURIZE(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_PRESSURIZE_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_READY(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_READY_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_CLEANING(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_CLEANING_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_END(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_END_WAIT(self):
-        pass
+        req = self.requests.get()
+        if req in [self.BUTTONS.EXIT]:
+            self.to_CLEAN_TERMINATE()
 
     def process_CLEAN_TERMINATE(self):
-        pass
+        log.info('Terminating cleaning sequence.')
+        self.to_STANDBY()
 
     # -------------------------------------------------------------------------
     def process_FAULT(self):
@@ -394,18 +502,13 @@ class MainWindow(QtWidgets.QMainWindow):
         title = 'Philler'
         self.setWindowTitle(title)
 
-        # -----------------------------------------------------------------------------
-        # Pull down menu
-
-        # Make the menu bar work the same across all platforms (looking at you, MacOS)
+        # Make the menu bar work the same across all platforms
         self.menubar.setNativeMenuBar(False)
 
         quit = self.findChild(QtWidgets.QAction, 'actionQuit') # type: QAction
         quit.setShortcut('Ctrl+Q')
         quit.setStatusTip('Quit application')
         quit.triggered.connect(QtWidgets.qApp.quit)
-
-        #self.w.b_go.pressed.connect(self.goPressed)
 
         # Filling device hardware
         self.filler = Filler()
@@ -416,9 +519,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.filler.finished.connect(self.filler.deleteLater)
         self.fillerThread.finished.connect(self.fillerThread.deleteLater)
         #self.hw.progress.connect(self.reportProgress)
-        self.filler.changed.connect(self.onUpdate)
+        self.filler.changed.connect(self.fillerChanged)
 
-        # Filling device hardware
+        # Filling device state machine
         self.seq = FillingSequencer(filler=self.filler)
         self.seqThread = QThread()
         self.seq.moveToThread(self.seqThread)
@@ -433,10 +536,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fillerThread.start()
         self.seqThread.start()
 
-        # Define a timer to periodically update screen widgets
+        # Define timers to periodically update screen widgets
         self.statusTimer = QTimer()
-        self.statusTimer.timeout.connect(self.checkStatus)
+        self.statusTimer.timeout.connect(self.updateStatus)
         self.statusTimer.start(100)
+
+
+        self.stateTimer = QTimer()
+        self.stateTimer.timeout.connect(self.updateState)
+        self.stateTimer.start(100)
+
+
+
 
 
         # Start out on the main page
@@ -451,34 +562,38 @@ class MainWindow(QtWidgets.QMainWindow):
         self.l_state.setText(self.seq.stateName)
         self.w.statusbar.addPermanentWidget(self.l_state, stretch=1)
 
+        self.l_message = QtWidgets.QLabel()
+        self.l_message.setText('')
+        self.w.statusbar.addPermanentWidget(self.l_message, stretch=1)
+
         # Add a connection status light to the status bar
         self.l_connected = QtWidgets.QLabel()
         self.l_connected.setText('TEXT')
         self.l_connected.setStyleSheet('color: red')
         self.w.statusbar.addPermanentWidget(self.l_connected)
 
+        # Hook the buttons to their processing logic
 
-        # Hook the navigation buttons
-        self.w.b_main_fill_bottles.clicked.connect(lambda: self.selectPanel(PAGES.FILL))
-        self.w.b_main_clean_system.clicked.connect(lambda: self.selectPanel(PAGES.CLEAN))
+        # Main panel
+        self.w.b_main_fill_bottles.clicked.connect(self.buttonClicked)
+        self.w.b_main_clean_system.clicked.connect(self.buttonClicked)
 
-        self.w.b_fill_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
-        self.w.b_clean_back.clicked.connect(lambda: self.selectPanel(PAGES.MAIN))
+        # Fill panel
+        self.w.b_fill_back.clicked.connect(self.buttonClicked)
 
+        # Clean panel
+        self.w.b_clean_back.clicked.connect(self.buttonClicked)
 
         # Diagnostics panel
-        self.w.b_main_diagnostics.clicked.connect(self.clickedDiagnostics)
-        self.w.b_diag_back.clicked.connect(self.clickedExitDiagnostics)
+        self.w.b_main_diagnostics.clicked.connect(self.buttonClicked)
+        self.w.b_diag_back.clicked.connect(self.buttonClicked)
         self.w.b_diag_sound_test.clicked.connect(self.play)
 
     def selectPanel(self, panel):
-        """Select one of the stacked panels"""
+        """Select one of the stacked main panels"""
         self.w.sw_pages.setCurrentIndex(panel.value)
 
-    def goPressed(self):
-        showDialog('GO!')
-
-    def onUpdate(self):
+    def fillerChanged(self):
         """Update the widgets that display values from the filler device"""
         weight_val = self.filler.weight
         pressure_val = self.filler.pressure
@@ -498,8 +613,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 
-    def checkStatus(self):
+    def updateStatus(self):
+        """Update the widgets on the status pane"""
         self.l_state.setText('  STATE: ' + self.seq.stateName)
+        self.l_message.setText('')
 
         if self.filler.connected:
             self.l_connected.setText('CONNECTED')
@@ -518,32 +635,62 @@ class MainWindow(QtWidgets.QMainWindow):
             QtMultimedia.QSound.play('agogo.wav')
 
 
-    def clickedDiagnostics(self):
-        """Handle the user clicking on the diagnostics button"""
+    def updateState(self):
+        """Update the screen to match the state machine"""
+        states = self.seq.STATES
+        fillStates = [state for state in range(states.FILL_START1, states.FILL_TERMINATE)]
+        cleanStates = [state for state in range(states.CLEAN_START1, states.CLEAN_TERMINATE)]
 
-        # Tell the state machine to enter the diagnostics state
-        success, message = self.seq.requestState(self.seq.STATES.DIAGNOSTICS)
-
-        if success:
-            # Allow the display of the diagnostics page
-            self.selectPanel(PAGES.DIAG)
-
-
-        else:
-            # Tell the user something went wrong
-            showDialog(message)
-
-    def clickedExitDiagnostics(self):
-        # Tell the state machine to enter the standby state
-        success, message = self.seq.requestState(self.seq.STATES.STANDBY)
-
-        if success:
-            # Allow the display of the main page
+        # Set the right panel
+        if self.seq.state in [states.STANDBY, states.FAULT, states.TERMINATED]:
             self.selectPanel(PAGES.MAIN)
 
-        else:
-            # Tell the user something went wrong
-            showDialog(message)
+        elif self.seq.state in [states.DIAGNOSTICS]:
+            self.selectPanel(PAGES.DIAG)
+
+        elif self.seq.state in fillStates:
+            self.selectPanel(PAGES.FILL)
+
+        elif self.seq.state in cleanStates:
+            self.selectPanel(PAGES.CLEAN)
+
+
+    def buttonClicked(self):
+        """Handle buttons being clicked"""
+
+        success = True
+        message = ''
+
+        buttons = self.seq.BUTTONS
+
+        # Which button originated the click?
+        origin = self.sender()
+
+        # Fill related buttons
+        if origin == self.w.b_main_fill_bottles:
+            self.seq.request(buttons.MAIN_ENTER_FILL)
+
+        elif origin == self.w.b_fill_back:
+            self.seq.request(buttons.EXIT)
+
+        # Clean related buttons
+        elif origin == self.w.b_main_clean_system:
+            self.seq.request(buttons.MAIN_ENTER_CLEAN)
+
+        elif origin == self.w.b_clean_back:
+            self.seq.request(buttons.EXIT)
+
+        # Diagnostics related buttons
+        elif origin == self.w.b_main_diagnostics:
+            self.seq.request(buttons.MAIN_ENTER_DIAGNOSTICS)
+
+        elif origin == self.w.b_diag_back:
+            self.seq.request(buttons.EXIT)
+
+        # Display the failure text
+        if not success:
+            self.l_message.setText(message)
+
 
 
 # end of class MainWindow
