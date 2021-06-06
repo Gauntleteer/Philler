@@ -135,6 +135,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Fill bottles panel
         b_fill_back               = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        b_fill_progress           = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        pb_pressure               = QtWidgets.QProgressBar         # type: QtWidgets.QProgressBar
 
         # Clean system panel
         b_clean_back              = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
@@ -308,6 +310,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.w.l_weight_neg.setText('')
 
         self.w.l_weight.setText(f'{abs(weight_val):03.2f}')
+
+        self.w.pb_pressure.setValue(pressure_val)
 
 
 
