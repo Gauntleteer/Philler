@@ -129,11 +129,11 @@ class FillingSequencer(Sequencer):
     # The messages that are shown on the progress screen.  Set the second parameter to FALSE to prevent the user from
     # pressing the button to proceed (some other condition will allow proceeding).
     messages = dict({
-        STATES.FILL_START1: ('Verify clean drip\n tray installed,\nwith no bottle.\n\n(Press here to proceed)', True),
-        STATES.FILL_START2: ('Connect filled bulk\ncontainer, air in\nand liquid out.\n\nConnect compressor\nair tubing.\n\nStart compressor.', True),
+        STATES.FILL_START1: ('Verify clean drip\n tray installed,\nwith no bottle.\n\n(Tap to continue)', True),
+        STATES.FILL_START2: ('Connect filled bulk\ncontainer, air in\nand liquid out.\n\nConnect compressor\nair tubing.\n\nStart compressor.\n\n(Tap to continue)', True),
         STATES.FILL_START3: ('Reset the stop switch.', True),
         STATES.FILL_PRESSURIZE: ('Pressurizing...', False),
-        STATES.FILL_PURGE_SETUP: ('Ready for purging.\n\nPlace waste cup under\nnozzle.\n\nPress foot switch to\npurge tubing, until\nall air is removed.\n\nRemove waste cup.', True),
+        STATES.FILL_PURGE_SETUP: ('Ready for purging.\n\nPlace waste cup under\nnozzle.\n\nPress foot switch to\npurge tubing, until\nall air is removed.\n\nRemove waste cup.\n\n(Tap to continue)', True),
         STATES.FILL_READY: ('', True),
         STATES.FILL_FILLING: ('', True),
         STATES.FILL_FILLING_WAIT: ('', True),
