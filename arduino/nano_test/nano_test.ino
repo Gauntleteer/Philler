@@ -19,7 +19,7 @@ void loop() {
   while (1) {
   
     foo = foo + 0.01;
-    pressure = pressure + 1;
+    pressure = pressure + 10;
     if (pressure > 900) {
       pressure = 100;
     }
