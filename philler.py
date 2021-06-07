@@ -480,8 +480,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.w = self.RefWidgets(self)
 
         self.setupUi()
-        self.show()
-        #self.showFullScreen()
+        #self.show()
+        self.showFullScreen()
 
     # -----------------------------------------------------------------------------
     def setupUi(self):
