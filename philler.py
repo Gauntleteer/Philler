@@ -695,7 +695,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.l_connected.setText('DISCONNECTED')
             self.l_connected.setStyleSheet('color: red')
 
-        #def fillerChanged(self):
         """Update the widgets that display values from the filler device"""
         weight_val = self.filler.weight
         pressure_val = self.filler.pressure
@@ -712,6 +711,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.w.pb_pressure.setValue(round(pressure_val))
 
+    def fillerChanged(self):
+        pass
 
 
     def play(self):
