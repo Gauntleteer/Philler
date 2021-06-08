@@ -33,7 +33,8 @@ class Filler(QObject):
 
         # Serial interface
         self.ser = None
-        self.port = '/dev/ttyUSB0'
+        #self.port = '/dev/ttyUSB0'
+        self.port = '/dev/ttyACM0'
         self.baudrate = 19200
         self.lastmessage = 0
 
