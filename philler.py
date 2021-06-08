@@ -576,8 +576,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.w = self.RefWidgets(self)
 
         self.setupUi()
-        #self.show()
-        self.showFullScreen()
+        self.show()
+        #self.showFullScreen()
 
     # -----------------------------------------------------------------------------
     def setupUi(self):
@@ -698,10 +698,14 @@ class MainWindow(QtWidgets.QMainWindow):
         """Update the widgets that display values from the filler device"""
         weight_val = self.filler.weight
         pressure_val = self.filler.pressure
+        foot_switch_val = ['Off', 'On'][self.filler.footswitch]
+        stop_switch_val = ['Off', 'On'][self.filler.stopswitch]
 
         # Diagnostics page
         self.w.l_diag_weight_value.setText(f'{weight_val:03.2f} g')
         self.w.l_diag_pressure_value.setText(f'{pressure_val:03.2f} psi')
+        self.w.l_diag_foot_switch.setText(foot_switch_val)
+        self.w.l_diag_stop_switch.setText(stop_switch_val)
 
         # Fill bottles page
         if weight_val > 0:

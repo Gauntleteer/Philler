@@ -148,6 +148,7 @@ void loop() {
   if (Serial1.available() > 0) {
     // read the incoming string:
     incomingString = Serial1.readStringUntil('\n');
+    //incomingString.replace('\r',' ');
     previousscaleMillis = currentscaleMillis;
   }
  
@@ -162,6 +163,5 @@ void loop() {
   Serial.print(stopswitchstring);
   Serial.print(";");
   Serial.println(footswitchstring);
-  
 } 
  

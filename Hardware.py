@@ -44,10 +44,11 @@ class Filler(QObject):
         self._stable = False
         self._stopswitch = False
         self._footswitch = False
+        self._footswitchLatched = False
         self.pressureRaw = 0
 
         # Task properties
-        self.tickrate = 0.1
+        self.tickrate = 0.005
         self._stop = Event()
         self._stop.clear()
         self.lock = Lock()
@@ -137,6 +138,14 @@ class Filler(QObject):
         with self.lock: self._footswitch = val
 
     @property
+    def footswitchLatched(self):
+        with self.lock: return self._footswitchLatched
+
+    @footswitch.setter
+    def footswitchLatched(self, val):
+        with self.lock: self._footswitchLatched = val
+
+    @property
     def stopswitch(self):
         with self.lock: return self._stopswitch
     @stopswitch.setter
@@ -199,7 +208,12 @@ class Filler(QObject):
 
         # Read a line from the Arduino
         #s = self.ser.read_until('\r\n')
+
         s = self.ser.readline()
+        #lines = self.ser.readlines(10)
+        #print(lines)
+        #s = lines[-1]
+        #log.debug(f's: {s}')
 
         if len(s) > 0:
             self.lastmessage = time.time()
@@ -231,11 +245,11 @@ class Filler(QObject):
                 self.stopswitch = (stopswitchStr == 'S')
 
                 # Decode the foot switch value
-                val = (footswitchStr == 'F')
+                self.footswitch = (footswitchStr == 'F')
 
-                # Only turn the foot switch on, never off (crude debounce)
-                if self.footswitch == False:
-                    self.footswitch = val
+                # Latch the foot switch (crude debounce)
+                if self.footswitchLatched == False:
+                    self.footswitchLatched = self.footswitch
 
                 #self.changed.emit()
 
