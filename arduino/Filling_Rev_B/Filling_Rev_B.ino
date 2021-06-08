@@ -1,4 +1,3 @@
-
 // Arduino Nano Every code for PCS Filling Machine
 
 //  Messages received from RPi host:
@@ -15,7 +14,6 @@
 
 #include "millisDelay.h" 
 
-
 // Digital I/O
 int footswitch = 3;  // Footswitch: Switch pressed = low
 int stopswitch = 4;  // Stop Switch: Switch pressed = low
@@ -25,8 +23,8 @@ int everypcbled = 13; // For watchdog led
 
 // Analog I/O
 int pressurein = A0;  // Pressure transducer
-   // 0 psi = 1 volt = 205
-   // 30 psi = 5 volts = 1023
+                      // 0 psi = 1 volt = 205
+                      // 30 psi = 5 volts = 1023
  
 // Variables
 String inString = "";          // string to hold input
@@ -55,56 +53,60 @@ unsigned long currentdispenseMillis = 0;
 
 //-----------------------------------------------------------------------
 void setup() {
-pinMode(dispensevalveoutput, OUTPUT);
-pinMode(footswitch, INPUT_PULLUP);
-pinMode(stopswitch, INPUT_PULLUP);
-pinMode(airvalveoutput, OUTPUT);
-pinMode (everypcbled, OUTPUT);
+  
+  pinMode(dispensevalveoutput, OUTPUT);
+  pinMode(footswitch, INPUT_PULLUP);
+  pinMode(stopswitch, INPUT_PULLUP);
+  pinMode(airvalveoutput, OUTPUT);
+  pinMode(everypcbled, OUTPUT);
 
-Serial.begin(19200);  // opens serial port (USB), sets data rate to 19,200 bps
-Serial1.begin(19200);  // opens serial port 1 (hardware) , sets data rate to 19,200 bps
-// Serial1.setTimeout(1000);
-
+  Serial.begin(19200);  // opens serial port (USB), sets data rate to 19,200 bps
+  Serial1.begin(19200);  // opens serial port 1 (hardware) , sets data rate to 19,200 bps
+  // Serial1.setTimeout(1000);
 }
+
 //-----------------------------------------------------------------------
 void loop() {
 
-// Make the Nano Every pcb led blink at 1 Hz
+  // Make the Nano Every pcb led blink at 1 Hz
 
-  if (millis() % 1000 > 500)
-  digitalWrite(everypcbled, LOW);  // turn the led off
-  else
-  digitalWrite(everypcbled, HIGH);  // turn the led oon
+  if (millis() % 1000 > 500) {
+    digitalWrite(everypcbled, LOW);  // turn the led off
+  } else {
+    digitalWrite(everypcbled, HIGH);  // turn the led oon
+  }
 
-// Get the pressure and switch inputs
+  // Get the pressure and switch inputs
+  pressurevalue = analogRead(pressurein);     // read the pressure input pin
 
-pressurevalue = analogRead(pressurein);     // read the pressure input pin
-
-footswitchstate = digitalRead(footswitch);  // read the footswitch input pin
-  if (footswitchstate == LOW) {
-    footswitchstring = "F";
+  footswitchstate = digitalRead(footswitch);  // read the footswitch input pin
+    if (footswitchstate == LOW) {
+      footswitchstring = "F";
+    } else {
+      footswitchstring = "f";
     }
-  else {
-    footswitchstring = "f";
-    }
-stopswitchstate = digitalRead(stopswitch);  // read the stopswitch input pin
+    
+  stopswitchstate = digitalRead(stopswitch);  // read the stopswitch input pin
   if (stopswitchstate == LOW) {
     stopswitchstring = "S";
-    }
-  else {
+  } else {
     stopswitchstring = "s";
-    }
+  }
 
-// Read the host serial commands
+  // Read the host serial commands
 
   char inchar;
   
   while (Serial.available() > 0) {
-    inchar = Serial.read();
+    
+    inchar = Serial.read();    
     inString += (char)inchar;
+    
     if (inchar == '_') {
+      
       if (inString == "P_")
         digitalWrite(airvalveoutput, HIGH);  // turn the valve on
+        
       if (inString == "p_")
         digitalWrite(airvalveoutput, LOW);  // turn the valve off
 //      Serial.println(inString);  // for testing only
@@ -112,48 +114,54 @@ stopswitchstate = digitalRead(stopswitch);  // read the stopswitch input pin
       pulsetime = inString.toInt();  // 0 if not digits
 //    Serial.println(pulsetime);  // for testing only
       inString = "";  // clear the string for new input:
-     }
-   } 
+    }    
+  } 
 
-// Pulse the dispense valve
+  // Pulse the dispense valve
 
-currentdispenseMillis = millis();
+  currentdispenseMillis = millis();
+  
   if (currentdispenseMillis - previousdispenseMillis >= pulsetime) {
+    
     previousdispenseMillis = currentdispenseMillis;
     digitalWrite(dispensevalveoutput, LOW);   // time to turn the valve off
-    pulsetime = 0; }
-  else {
+    pulsetime = 0; 
+    
+  } else {
+    
     digitalWrite(dispensevalveoutput, HIGH);  // turn the valve on
-    }
+  }
 
     
-// Send the scale data
-// If the scale is off line just send
-// the pressure and the switch states
+  // Send the scale data
+  // If the scale is off line just send
+  // the pressure and the switch states
  
   currentscaleMillis = millis();
   if (currentscaleMillis - previousscaleMillis <= scalemaxtime) {
-    scaleoffline = false;  }
-  else   {
+    scaleoffline = false;  
+  } else {
     scaleoffline = true;
   }
 
   // check if data is available from the scale
   if (Serial1.available() > 0) {
     // read the incoming string:
-  incomingString = Serial1.readStringUntil('\n');
-  previousscaleMillis = currentscaleMillis;
+    incomingString = Serial1.readStringUntil('\n');
+    previousscaleMillis = currentscaleMillis;
   }
  
   if (scaleoffline == true) {
-    incomingString = "$"; } 
-    Serial.print(incomingString);
-    Serial.print(";");
-    Serial.print(pressurevalue);
-    Serial.print(";");
-    Serial.print(stopswitchstring);
-    Serial.print(";");
-    Serial.println(footswitchstring);
-
- } 
+    incomingString = "$"; 
+  } 
+  
+  Serial.print(incomingString);
+  Serial.print(";");
+  Serial.print(pressurevalue);
+  Serial.print(";");
+  Serial.print(stopswitchstring);
+  Serial.print(";");
+  Serial.println(footswitchstring);
+  
+} 
  
