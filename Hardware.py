@@ -3,8 +3,9 @@ import logging
 import serial
 import traceback
 from threading import Lock, Event
-from queue import Queue
+from queue import SimpleQueue
 import re
+from enum import Enum, auto, IntEnum
 
 from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
 
@@ -18,9 +19,13 @@ class Filler(QObject):
     heartbeat = pyqtSignal(int)
     changed = pyqtSignal()
 
-    def __init__(self, *args, **kwargs):
+    # -------------------------------------------------------------------------
+    def __init__(self, simulate=False, *args, **kwargs):
 
         QObject.__init__(self, *args, **kwargs)
+
+        # Flag to indicate we are in a simulation mode
+        self.simulate = simulate
 
         # Conversion factors
         self.PSIperCount = None
@@ -33,7 +38,7 @@ class Filler(QObject):
         self.lastmessage = 0
 
         # Interface to callers
-        self._commands = Queue()
+        self.requests = SimpleQueue()
         self._weight = 0.0
         self._stable = False
         self._stopswitch = False
@@ -46,7 +51,7 @@ class Filler(QObject):
         self._stop.clear()
         self.lock = Lock()
 
-
+    # -------------------------------------------------------------------------
     def countsToPSI(self, counts):
         """Convert A to D counts into a PSI value """
 
@@ -102,6 +107,7 @@ class Filler(QObject):
 
         return psi
 
+    # -------------------------------------------------------------------------
     @property
     def connected(self):
         # If we have received a message in the last second, we are "connected"
@@ -150,13 +156,38 @@ class Filler(QObject):
 
             return self.countsToPSI(p)
 
-
+    # -------------------------------------------------------------------------
     def setup(self, port, baudrate):
         """Set the properties of the serial port"""
         self.port = port
         self.baudrate = baudrate
 
+    # -------------------------------------------------------------------------
+    class TASKS(IntEnum):
+        """Task requests that can be made from other threads"""
+        ABORT      = 0
+        PRESSURIZE = auto()
+        VENT       = auto()
+        DISPENSE   = auto()
 
+    def request(self, task, param=None):
+        """Create a request event to the filler I/O"""
+        if task in self.TASKS:
+            self.requests.put((task,param), block=False)
+        else:
+            log.critical(f'Unknown task requested of filler hardware: {task}')
+
+    def getRequest(self):
+        """Get the most recent request"""
+        if not self.requests.empty():
+            task, param = self.requests.get(block=False, timeout=0)
+        else:
+            task = None
+            param = None
+
+        return task, param
+
+    # -------------------------------------------------------------------------
     def read(self):
         """Read from the serial port and parse the fields out"""
         if self.ser is None:
@@ -168,7 +199,6 @@ class Filler(QObject):
         # Read a line from the Arduino
         #s = self.ser.read_until('\r\n')
         s = self.ser.readline()
-        #log.debug(s)
 
         if len(s) > 0:
             self.lastmessage = time.time()
@@ -199,8 +229,12 @@ class Filler(QObject):
                 # Decode the stop switch value
                 self.stopswitch = (stopswitchStr == 'S')
 
-                # Decode the stop switch value
-                self.footswitch = (footswitchStr == 'F')
+                # Decode the foot switch value
+                val = (footswitchStr == 'F')
+
+                # Only turn the foot switch on, never off (crude debounce)
+                if self.footswitch == False:
+                    self.footswitch = val
 
                 self.changed.emit()
 
@@ -211,6 +245,32 @@ class Filler(QObject):
             #log.info('Empty read from serial port!')
             pass
 
+        # See if there's a request to send to the arduino
+        task, param = self.getRequest()
+        if task is not None:
+
+            if task == self.TASKS.PRESSURIZE:
+                # Send the valve state to pressurize the bulk
+                log.critical('SENDING PRESSURIZE')
+                self.ser.write(f'P_'.encode('UTF-8'))
+
+            elif task == self.TASKS.VENT:
+                # Send the valve state to de-pressurize the bulk
+                log.critical('SENDING DE-PRESSURIZE')
+                self.ser.write(f'p_'.encode('UTF-8'))
+
+            elif task == self.TASKS.DISPENSE:
+                # Send a dispense down to the filler hardware
+                log.critical(f'SENDING DISPENSE FOR {param}ms')
+                self.ser.write(f'{param}_'.encode('UTF-8'))
+
+            elif task == self.TASKS.ABORT:
+                # Zero out the dispense time to force it to stop
+                log.critical('SENDING ABORT')
+                self.ser.write(f'0_'.encode('UTF-8'))
+
+
+    # -------------------------------------------------------------------------
     @property
     def stopping(self):
         return self._stop.isSet()
@@ -223,6 +283,7 @@ class Filler(QObject):
         # ser.write(b'ERR?\n')
         pass
 
+    # -------------------------------------------------------------------------
     def main(self):
         """
         Main thread loop.
@@ -245,10 +306,6 @@ class Filler(QObject):
             try:
                 # Run the hardware interface
                 self.read()
-
-                #s = ser.read(100)
-                #s = ser.read_until('\n')
-                #log.debug(s)
 
             except Exception as e:
                 log.critical(f'Exception during processing: {e}')

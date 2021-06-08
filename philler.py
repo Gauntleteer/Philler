@@ -26,6 +26,10 @@ log = logging.getLogger('')
 # Disable the debug logging from Qt
 logging.getLogger('PyQt5').setLevel(logging.WARNING)
 
+# Variables for simulated I/O
+simulate = False
+simFootSwitchState = False
+
 class PAGES(Enum):
     """
     The pages in the application.
@@ -84,8 +88,11 @@ class FillingSequencer(Sequencer):
         FILL_START2                 = auto()
         FILL_START3                 = auto()
         FILL_PRESSURIZE             = auto()
+        FILL_PURGE_INIT             = auto()
         FILL_PURGE_SETUP            = auto()
-        FILL_READY                  = auto()
+        FILL_PURGE_WAIT             = auto()
+        FILL_READY_SETUP            = auto()
+        FILL_READY_WAIT             = auto()
         FILL_FILLING                = auto()
         FILL_FILLING_WAIT           = auto()
         FILL_FILLING_RESET          = auto()
@@ -114,6 +121,11 @@ class FillingSequencer(Sequencer):
         EXIT                        = 0
         ABORT                       = auto()
 
+        # Simulated actions
+        SIM_FOOT_SWITCH             = auto()
+        SIM_STOP_SWITCH_OFF         = auto()
+        SIM_STOP_SWITCH_ON          = auto()
+
         # Main screen
         MAIN_ENTER_FILL             = auto()
         MAIN_ENTER_CLEAN            = auto()
@@ -133,13 +145,15 @@ class FillingSequencer(Sequencer):
         STATES.FILL_START2: ('Connect filled bulk\ncontainer, air in\nand liquid out.\n\nConnect compressor\nair tubing.\n\nStart compressor.\n\n(Tap to continue)', True),
         STATES.FILL_START3: ('Reset the stop switch.', True),
         STATES.FILL_PRESSURIZE: ('Pressurizing...', False),
+        #STATES.FILL_PURGE_INIT: ('', False),
         STATES.FILL_PURGE_SETUP: ('Ready for purging.\n\nPlace waste cup under\nnozzle.\n\nPress foot switch to\npurge tubing, until\nall air is removed.\n\nRemove waste cup.\n\n(Tap to continue)', True),
-        STATES.FILL_READY: ('', True),
-        STATES.FILL_FILLING: ('', True),
-        STATES.FILL_FILLING_WAIT: ('', True),
-        STATES.FILL_FILLING_RESET: ('', True),
-        STATES.FILL_END: ('', True),
-        STATES.FILL_TERMINATE: ('', True),
+        STATES.FILL_PURGE_WAIT: ('Purging...', False),
+        STATES.FILL_READY_WAIT: ('Ready to fill bottle.\n\nPlace a bottle on\nscale under dispense\nneedle.  Press foot\nswitch once to fill\nbottle.', False),
+        #STATES.FILL_FILLING: ('', True),
+        STATES.FILL_FILLING_WAIT: ('Filling...', False),
+        #STATES.FILL_FILLING_RESET: ('', True),
+        #STATES.FILL_END: ('', True),
+        #STATES.FILL_TERMINATE: ('', True),
     })
 
 
@@ -152,10 +166,10 @@ class FillingSequencer(Sequencer):
         # Setup the sequencer with the states we plan to use
         self.prepare(self.STATES)
 
-        # A timer for connect timeouts
-        self.connecttimer = CountdownTimer()
-        self.connecttimer.start(minutes=1)
-        self.connecttimer.expire()
+        # A timer for state timeouts
+        self.timer = CountdownTimer()
+        self.timer.start(seconds=1)
+        self.timer.expire()
 
         # A queue for requests from the user
         self.requests = SimpleQueue()
@@ -167,7 +181,7 @@ class FillingSequencer(Sequencer):
             text, enable = self.messages[self.state]
         except KeyError:
             text = ''
-            enable = True
+            enable = False
 
         return text, enable
 
@@ -184,7 +198,6 @@ class FillingSequencer(Sequencer):
             req = None
         
         return req
-
 
     # -------------------------------------------------------------------------
     def requestState(self, newState):
@@ -216,8 +229,7 @@ class FillingSequencer(Sequencer):
 
     # -------------------------------------------------------------------------
     def process_STANDBY(self):
-
-        # Transition the user to the various main screens
+        """Transition the user to the various main screens"""
         req = self.getRequest()
 
         if req in [self.BUTTONS.MAIN_ENTER_FILL]:
@@ -229,6 +241,7 @@ class FillingSequencer(Sequencer):
 
     # -------------------------------------------------------------------------
     def process_DIAGNOSTICS(self):
+        """Run the diagnostics screen, not much to do here, state machine wise"""
         req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT]:
@@ -236,6 +249,7 @@ class FillingSequencer(Sequencer):
 
     # -------------------------------------------------------------------------
     def process_FILL_START1(self):
+        """First filling screen page"""
         req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
@@ -244,6 +258,7 @@ class FillingSequencer(Sequencer):
             self.to_FILL_START2()
 
     def process_FILL_START2(self):
+        """Second filling screen page"""
         req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
@@ -252,37 +267,91 @@ class FillingSequencer(Sequencer):
             self.to_FILL_START3()
 
     def process_FILL_START3(self):
+        """Wait for the stop switch here"""
         req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
 
         # Wait for the STOP switch state to be ON
-        if req in [self.BUTTONS.FILL_NEXT]:
+        if self.filler.stopswitch:
             self.to_FILL_PRESSURIZE()
+
+        # Or let the simulator dictate the switch
+        if simulate and simFootSwitchState:
+                self.to_FILL_PRESSURIZE()
 
     def process_FILL_PRESSURIZE(self):
         req = self.getRequest()
-
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
-            self.to_FILL_TERMINATE()
 
         # Advance to the next state when the pressure is over 30
         if self.filler.pressure >= 30:
             self.to_FILL_PURGE_SETUP()
 
-        if req in [self.BUTTONS.FILL_NEXT]:
+        # If simulating, disregard the pressure
+        if simulate:
             self.to_FILL_PURGE_SETUP()
-
-
-    def process_FILL_PURGE_SETUP(self):
-        req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
 
-    def process_FILL_READY(self):
+    def process_FILL_PURGE_INIT(self):
+        """Init the purge state by clearing any previous foot switches"""
+        self.filler.footswitch = False
+        self.to_FILL_PURGE_SETUP()
+
+    def process_FILL_PURGE_SETUP(self):
         req = self.getRequest()
+
+        # Wait for a footswitch, or use the faked I/O
+        if (req in [self.BUTTONS.SIM_FOOT_SWITCH]) or self.filler.footswitch:
+
+            # Acknowledge the foot switch was hit
+            self.filler.footswitch = False
+
+            # Send the pulse to do a single purge
+            self.filler.request(task=self.filler.TASKS.DISPENSE, param=250)
+
+            # Start a one second timer
+            self.timer.start(seconds=1)
+
+            self.to_FILL_PURGE_WAIT()
+
+        # Skip to next screen if user presses the button
+        if req in [self.BUTTONS.FILL_NEXT]:
+            self.to_FILL_READY_SETUP()
+
+        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+            self.to_FILL_TERMINATE()
+
+    def process_FILL_PURGE_WAIT(self):
+        """Wait for the purge pulse to complete"""
+        if self.timer.expired:
+            self.to_FILL_PURGE_SETUP()
+
+        req = self.getRequest()
+        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+            self.to_FILL_TERMINATE()
+
+    def process_FILL_READY_SETUP(self):
+        """Init the state by clearing any previous foot switches"""
+        self.filler.footswitch = False
+        self.to_FILL_READY_WAIT()
+
+        req = self.getRequest()
+        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+            self.to_FILL_TERMINATE()
+
+    def process_FILL_READY_WAIT(self):
+        """Waiting for user to hit the foot switch to do a fill"""
+        req = self.getRequest()
+
+        # Wait for a footswitch, or use the faked I/O
+        if (req in [self.BUTTONS.SIM_FOOT_SWITCH]) or self.filler.footswitch:
+
+            # Acknowledge the foot switch was hit
+            self.filler.footswitch = False
+            self.to_FILL_FILLING()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
@@ -290,10 +359,29 @@ class FillingSequencer(Sequencer):
     def process_FILL_FILLING(self):
         req = self.getRequest()
 
+        # Send the pulse to do a fill
+        self.filler.request(task=self.filler.TASKS.DISPENSE, param=30000)
+
+        # Start a timer
+        self.timer.start(seconds=3)
+
+        # Advance to the waiting state
+        self.to_FILL_FILLING_WAIT()
+
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
 
     def process_FILL_FILLING_WAIT(self):
+        """Wait for the fill to complete"""
+
+        # Look for timeout
+        if self.timer.expired:
+            self.to_FILL_READY_WAIT()
+
+        # Is the delivered weight sufficient for a fill?
+
+
+
         req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
@@ -313,6 +401,14 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_TERMINATE(self):
         log.info('Terminating fill sequence.')
+
+        # Zero out any pulse in progress
+        self.filler.request(task=self.filler.TASKS.ABORT)
+
+        # Vent the bulk
+        self.filler.request(task=self.filler.TASKS.VENT)
+
+        # Back to first page
         self.to_STANDBY()
 
     # -------------------------------------------------------------------------
@@ -498,7 +594,7 @@ class MainWindow(QtWidgets.QMainWindow):
         quit.triggered.connect(QtWidgets.qApp.quit)
 
         # Filling device hardware
-        self.filler = Filler()
+        self.filler = Filler(simulate=simulate)
         self.fillerThread = QThread()
         self.filler.moveToThread(self.fillerThread)
         self.fillerThread.started.connect(self.filler.main)
@@ -552,6 +648,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.l_message = QtWidgets.QLabel()
         self.l_message.setText('')
         self.w.statusbar.addPermanentWidget(self.l_message, stretch=1)
+
+        # Create the simulated I/O, but only add it to the form if enabled
+        self.b_foot_switch_simulate = QtWidgets.QPushButton('FOOT')
+        self.b_stop_switch_simulate = QtWidgets.QPushButton('STOP')
+        if simulate:
+            self.w.statusbar.addPermanentWidget(self.b_foot_switch_simulate, stretch=1)
+            self.w.statusbar.addPermanentWidget(self.b_stop_switch_simulate, stretch=1)
+            self.b_foot_switch_simulate.clicked.connect(self.buttonClicked)
+            self.b_stop_switch_simulate.clicked.connect(self.buttonClicked)
 
         # Add a connection status light to the status bar
         self.l_connected = QtWidgets.QLabel()
@@ -644,6 +749,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def buttonClicked(self):
         """Handle buttons being clicked"""
+        global simFootSwitchState
 
         success = True
         message = ''
@@ -680,6 +786,25 @@ class MainWindow(QtWidgets.QMainWindow):
         elif origin == self.w.b_diag_back:
             self.seq.request(buttons.EXIT)
 
+
+        # Simulated I/O buttons
+        elif origin == self.b_foot_switch_simulate:
+            self.seq.request(buttons.SIM_FOOT_SWITCH)
+
+        elif origin == self.b_stop_switch_simulate:
+
+            # Invert the switch state
+            simFootSwitchState = not simFootSwitchState
+
+            if simFootSwitchState:
+                self.seq.request(buttons.SIM_STOP_SWITCH_ON)
+                self.b_stop_switch_simulate.setStyleSheet('background-color: blue')
+            else:
+                self.seq.request(buttons.SIM_STOP_SWITCH_OFF)
+                self.b_stop_switch_simulate.setStyleSheet('')
+
+
+
         # Display the failure text
         if not success:
             self.l_message.setText(message)
@@ -690,6 +815,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == '__main__':
+
+    # -------------------------------------------------------------------------
+    # Commandline arguments
+    parser = argparse.ArgumentParser(description='Philler')
+    #parser.add_argument('-d', '--debug', help='Enable debugging output', action='store_true')
+    parser.add_argument('-s', '--simulate', help='Enable simulation of I/O', action='store_true')
+    args = parser.parse_args()
+
+    # Get the debug argument first, as it drives our logging choices
+    #if args.debug:
+    #    debug = True
+
+    if args.simulate:
+        log.critical('SIMULATING I/O')
+        simulate = True
+
+
 
     # GUI
     app = QtWidgets.QApplication(sys.argv)
