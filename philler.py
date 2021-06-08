@@ -682,26 +682,6 @@ class MainWindow(QtWidgets.QMainWindow):
         """Select one of the stacked main panels"""
         self.w.sw_pages.setCurrentIndex(panel.value)
 
-    def fillerChanged(self):
-        """Update the widgets that display values from the filler device"""
-        weight_val = self.filler.weight
-        pressure_val = self.filler.pressure
-
-        # Diagnostics page
-        self.w.l_diag_weight_value.setText(f'{weight_val:03.2f} g')
-        self.w.l_diag_pressure_value.setText(f'{pressure_val:03.2f} psi')
-
-
-        # Fill bottles page
-        if weight_val > 0:
-            self.w.l_weight_neg.setText('')
-
-        self.w.l_weight.setText(f'{abs(weight_val):03.2f}')
-
-        self.w.pb_pressure.setValue(round(pressure_val))
-
-
-
     def updateStatus(self):
         """Update the widgets on the status pane"""
         self.l_state.setText('  STATE: ' + self.seq.stateName)
@@ -714,6 +694,25 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.l_connected.setText('DISCONNECTED')
             self.l_connected.setStyleSheet('color: red')
+
+        #def fillerChanged(self):
+        """Update the widgets that display values from the filler device"""
+        weight_val = self.filler.weight
+        pressure_val = self.filler.pressure
+
+        # Diagnostics page
+        self.w.l_diag_weight_value.setText(f'{weight_val:03.2f} g')
+        self.w.l_diag_pressure_value.setText(f'{pressure_val:03.2f} psi')
+
+        # Fill bottles page
+        if weight_val > 0:
+            self.w.l_weight_neg.setText('')
+
+        self.w.l_weight.setText(f'{abs(weight_val):03.2f}')
+
+        self.w.pb_pressure.setValue(round(pressure_val))
+
+
 
     def play(self):
         x = random.random()

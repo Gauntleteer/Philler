@@ -237,7 +237,7 @@ class Filler(QObject):
                 if self.footswitch == False:
                     self.footswitch = val
 
-                self.changed.emit()
+                #self.changed.emit()
 
             else:
                 log.critical(f'Unable to parse string: {s}')
@@ -302,7 +302,7 @@ class Filler(QObject):
             #log.info(f'Elapsed: {elapsed}')
 
             hb += 1
-            self.heartbeat.emit(hb)
+            #self.heartbeat.emit(hb)
 
             try:
                 # Run the hardware interface
