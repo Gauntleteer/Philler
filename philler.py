@@ -282,8 +282,8 @@ class FillingSequencer(Sequencer):
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
 
-        # Wait for the STOP switch state to be ON
-        if self.filler.stopswitch:
+        # Wait for the STOP switch state to be OFF/False
+        if not self.filler.stopswitch:
             self.to_FILL_PRESSURIZE()
 
         # Or let the simulator dictate the switch
@@ -719,8 +719,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.w.l_diag_stop_switch.setText(stop_switch_val)
 
         # Fill bottles page
-        if weight_val > 0:
+        if weight_val >= 0:
             self.w.l_weight_neg.setText('')
+        else:
+            self.w.l_weight_neg.setText('-')
 
         self.w.l_weight.setText(f'{abs(weight_val):03.2f}')
 
