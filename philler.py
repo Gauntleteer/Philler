@@ -139,6 +139,7 @@ class FillingSequencer(Sequencer):
         # Diagnostics screen
         DIAG_PRESSURE_ON            = auto()
         DIAG_PRESSURE_OFF           = auto()
+        DIAG_DISPENSE               = auto()
 
     # The messages that are shown on the progress screen.  Set the second parameter to FALSE to prevent the user from
     # pressing the button to proceed (some other condition will allow proceeding).
@@ -175,6 +176,9 @@ class FillingSequencer(Sequencer):
 
         # A queue for requests from the user
         self.requests = SimpleQueue()
+
+        # TODO: FIX THIS HORRIBLE HACK
+        self.dispense_param = 250
 
     @property
     def message(self):
@@ -254,6 +258,9 @@ class FillingSequencer(Sequencer):
 
         if req in [self.BUTTONS.DIAG_PRESSURE_OFF]:
             self.filler.request(task=self.filler.TASKS.VENT)
+
+        if req in [self.BUTTONS.DIAG_DISPENSE]:
+            self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.dispense_param)
 
 
     # -------------------------------------------------------------------------
@@ -521,8 +528,10 @@ class MainWindow(QtWidgets.QMainWindow):
         l_diag_weight_value       = QtWidgets.QLabel               # type: QtWidgets.QLabel
         b_diag_back               = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
         b_diag_sound_test         = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
-        b_diag_pressure_on        = QtWidgets.QPushButton  # type: QtWidgets.QPushButton
-        b_diag_pressure_off       = QtWidgets.QPushButton  # type: QtWidgets.QPushButton
+        b_diag_pressure_on        = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        b_diag_pressure_off       = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        le_diag_dispense_time     = QtWidgets.QLineEdit            # type: QtWidgets.QLineEdit
+        b_diag_dispense           = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
 
 
         #b_go                      = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
@@ -684,7 +693,8 @@ class MainWindow(QtWidgets.QMainWindow):
             # Clean panel
             self.w.b_clean_back,
             # Diagnostics panel
-            self.w.b_main_diagnostics, self.w.b_diag_back, self.w.b_diag_sound_test, self.w.b_diag_pressure_on, self.w.b_diag_pressure_off]:
+            self.w.b_main_diagnostics, self.w.b_diag_back, self.w.b_diag_sound_test,
+            self.w.b_diag_pressure_on, self.w.b_diag_pressure_off, self.w.b_diag_dispense]:
 
             button.clicked.connect(self.buttonClicked)
 
@@ -808,6 +818,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
         elif origin == self.w.b_diag_pressure_off:
             self.seq.request(buttons.DIAG_PRESSURE_OFF)
+
+        elif origin == self.w.b_diag_dispense:
+            try:
+                text = self.w.le_diag_dispense_time.text()
+                self.seq.dispense_param = int(text)
+            except:
+                showDialog(f'Text: "{text}" not a valid integer!')
+
+            self.seq.request(buttons.DIAG_DISPENSE)
 
         # Simulated I/O buttons
         elif origin == self.b_foot_switch_simulate:
