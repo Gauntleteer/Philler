@@ -147,7 +147,6 @@ class Configuration():
 
     def get(self, configurable):
         """Get a configurable value with its properties"""
-
         try:
             # Verify we have an item for the desired configurable value
             item = self.configurableItems[configurable]
@@ -156,7 +155,12 @@ class Configuration():
 
         except KeyError:
             # Return something sane, but not useful
-            return 0.0, 'inv', '(invalid)'
+            return 0.0, 'inv', '(invalid)', float
+
+    def getValue(self, configurable):
+        """Get just the value"""
+        val, _, _, _ = self.get(configurable)
+        return val
 
     def set(self, configurable, value, save=True):
         """Get a configurable value with its properties"""

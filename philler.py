@@ -14,6 +14,8 @@ from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QFont
 
 import Configuration
+from Configuration import CFG
+
 from Hardware import Filler
 from Sequencer import Sequencer
 from CountdownTimer import CountdownTimer
@@ -129,11 +131,6 @@ class FillingSequencer(Sequencer):
         # Common actions
         EXIT                        = 0
         ABORT                       = auto()
-
-        # Simulated actions
-        SIM_FOOT_SWITCH             = auto()
-        SIM_STOP_SWITCH_OFF         = auto()
-        SIM_STOP_SWITCH_ON          = auto()
 
         # Main screen
         MAIN_ENTER_FILL             = auto()
@@ -319,19 +316,11 @@ class FillingSequencer(Sequencer):
         if not self.filler.stopswitch:
             self.to_FILL_PRESSURIZE()
 
-        # Or let the simulator dictate the switch
-        if simulate and simFootSwitchState:
-                self.to_FILL_PRESSURIZE()
-
     def process_FILL_PRESSURIZE(self):
         req = self.getRequest()
 
-        # Advance to the next state when the pressure is over 30
-        if self.filler.pressure >= 30:
-            self.to_FILL_PURGE_SETUP()
-
-        # If simulating, disregard the pressure
-        if simulate:
+        # Advance to the next state when the pressure is over 20
+        if self.filler.pressure >= self.config.getValue(CFG.FILL_PRESSURE):
             self.to_FILL_PURGE_SETUP()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
@@ -345,11 +334,11 @@ class FillingSequencer(Sequencer):
     def process_FILL_PURGE_SETUP(self):
         req = self.getRequest()
 
-        # Wait for a footswitch, or use the faked I/O
-        if (req in [self.BUTTONS.SIM_FOOT_SWITCH]) or self.filler.footswitch:
+        # Wait for a footswitch
+        if self.filler.footswitchLatched:
 
             # Acknowledge the foot switch was hit
-            self.filler.footswitch = False
+            self.filler.footswitchLatched = False
 
             # Send the pulse to do a single purge
             self.filler.request(task=self.filler.TASKS.DISPENSE, param=250)
@@ -389,10 +378,10 @@ class FillingSequencer(Sequencer):
         req = self.getRequest()
 
         # Wait for a footswitch, or use the faked I/O
-        if (req in [self.BUTTONS.SIM_FOOT_SWITCH]) or self.filler.footswitch:
+        if self.filler.footswitchLatched:
 
             # Acknowledge the foot switch was hit
-            self.filler.footswitch = False
+            self.filler.footswitchLatched = False
             self.to_FILL_FILLING()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
@@ -708,11 +697,18 @@ class MainWindow(QtWidgets.QMainWindow):
         # Create the simulated I/O, but only add it to the form if enabled
         self.b_foot_switch_simulate = QtWidgets.QPushButton('FOOT')
         self.b_stop_switch_simulate = QtWidgets.QPushButton('STOP')
+        self.b_pressure_simulate = QtWidgets.QPushButton('PRES')
+        self.b_weight_simulate = QtWidgets.QPushButton('WGT')
+
         if simulate:
             self.w.statusbar.addPermanentWidget(self.b_foot_switch_simulate, stretch=1)
             self.w.statusbar.addPermanentWidget(self.b_stop_switch_simulate, stretch=1)
+            self.w.statusbar.addPermanentWidget(self.b_pressure_simulate, stretch=1)
+            self.w.statusbar.addPermanentWidget(self.b_weight_simulate, stretch=1)
             self.b_foot_switch_simulate.clicked.connect(self.buttonClicked)
             self.b_stop_switch_simulate.clicked.connect(self.buttonClicked)
+            self.b_pressure_simulate.clicked.connect(self.buttonClicked)
+            self.b_weight_simulate.clicked.connect(self.buttonClicked)
 
         # Add a connection status light to the status bar
         self.l_connected = QtWidgets.QLabel()
@@ -740,7 +736,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # Build the setup screen
         self.setupConfigurables()
 
-
     def setupConfigurables(self):
         """Setup the configurable items"""
         for index, cfg in enumerate(Configuration.CFG):
@@ -766,6 +761,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.w.gl_setup_configurables.addWidget(value_label, index, 1)
             self.w.gl_setup_configurables.addWidget(update_button, index, 2)
 
+        # Finish off with a spacer that pushes everything up to the top
         verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.w.gl_setup_configurables.addItem(verticalSpacer)
 
@@ -853,6 +849,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Display the pressure value as a progress bar
         self.w.pb_pressure.setValue(round(pressure_val))
+
+        max = self.config.getValue(CFG.DISPLAY_PRESSURE)
+        self.w.pb_pressure.setMaximum(round(max))
 
     def fillerChanged(self):
         pass
@@ -956,26 +955,63 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Simulated I/O buttons
         elif origin == self.b_foot_switch_simulate:
-            self.seq.request(buttons.SIM_FOOT_SWITCH)
+            self.filler.simulateFootswitch(True)
 
         elif origin == self.b_stop_switch_simulate:
 
             # Invert the switch state
-            simFootSwitchState = not simFootSwitchState
+            self.filler.simulateStopSwitch(toggle=True)
 
-            if simFootSwitchState:
-                self.seq.request(buttons.SIM_STOP_SWITCH_ON)
+            if self.filler.stopswitch:
                 self.b_stop_switch_simulate.setStyleSheet('background-color: blue')
             else:
-                self.seq.request(buttons.SIM_STOP_SWITCH_OFF)
                 self.b_stop_switch_simulate.setStyleSheet('')
 
+        elif origin == self.b_pressure_simulate:
+            # Prompt the user for a new pressure value
+            v = self.promptValue()
+            self.filler.simulatePressure(v)
 
+        elif origin == self.b_weight_simulate:
+            # Prompt the user for a new weight value
+            v = self.promptValue()
+            self.filler.simulateWeight(v)
 
         # Display the failure text
         if not success:
             self.l_message.setText(message)
 
+    def promptValue(self):
+        """Prompt the user for a value, used to override pressure/weight"""
+
+        # Create a message box
+        msgbox = QtWidgets.QMessageBox()
+        msgbox.setIcon(QMessageBox.Question)
+        msgbox.setText(f'New value:')
+        msgbox.setWindowTitle('Change a value')
+        msgbox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+        # Get the grid layout
+        layout = msgbox.layout() # type: QGridLayout
+        le = QtWidgets.QLineEdit()
+        le.setMinimumSize(100, 20)
+
+        # Jam the line edit into the layout of the message box at row 1, column 1
+        layout.addWidget(le, 1, 1, 1, layout.columnCount(), Qt.AlignCenter)
+
+        # Focus the user on the edit field
+        le.setFocus()
+
+        # Test the return from the message box
+        returnvalue = msgbox.exec()
+        if returnvalue in [QMessageBox.Ok, QMessageBox.Yes]:
+            try:
+                v = float(le.text())
+            except:
+                v = 0.0
+            return v
+
+        return 0.0
 
 
 # end of class MainWindow

@@ -28,6 +28,10 @@ class Filler(QObject):
 
         # Flag to indicate we are in a simulation mode
         self.simulate = simulate
+        self.simulatedPressure = 0.0
+        self.simulatedWeight = 0.0
+        self.simulatedFootswitchLatched = False
+        self.simulatedStopswitch = False
 
         # Conversion factors
         self.PSIperCount = None
@@ -129,7 +133,12 @@ class Filler(QObject):
 
     @property
     def weight(self):
-        with self.lock: return self._weight
+        if self.simulate:
+            return self.simulatedWeight
+
+        with self.lock:
+            return self._weight
+
     @weight.setter
     def weight(self, val):
         with self.lock:
@@ -142,6 +151,9 @@ class Filler(QObject):
 
     @property
     def stable(self):
+        if self.simulate:
+            return True
+
         with self.lock:
 
             # Once we have enough values to work with...
@@ -160,28 +172,40 @@ class Filler(QObject):
 
     @property
     def footswitch(self):
-        with self.lock: return self._footswitch
+        with self.lock:
+            return self._footswitch
     @footswitch.setter
     def footswitch(self, val):
         with self.lock: self._footswitch = val
 
     @property
     def footswitchLatched(self):
-        with self.lock: return self._footswitchLatched
+        if self.simulate:
+            return self.simulatedFootswitchLatched
+        with self.lock:
+            return self._footswitchLatched
 
     @footswitchLatched.setter
     def footswitchLatched(self, val):
-        with self.lock: self._footswitchLatched = val
+        with self.lock:
+            self._footswitchLatched = val
+            self.simulatedFootswitchLatched = val
 
     @property
     def stopswitch(self):
-        with self.lock: return self._stopswitch
+        if self.simulate:
+            return self.simulatedStopswitch
+        with self.lock:
+            return self._stopswitch
     @stopswitch.setter
     def stopswitch(self, val):
         with self.lock: self._stopswitch = val
 
     @property
     def pressure(self):
+        if self.simulate:
+            return self.simulatedPressure
+
         # Convert the raw pressure value into PSI
         with self.lock:
             p = self.pressureRaw
@@ -193,6 +217,26 @@ class Filler(QObject):
                 p = 0
 
             return self.countsToPSI(p)
+
+    # -------------------------------------------------------------------------
+    def simulatePressure(self, val):
+        self.simulate = True
+        self.simulatedPressure = val
+
+    def simulateWeight(self, val):
+        self.simulate = True
+        self.simulatedWeight = val
+
+    def simulateFootswitch(self, val):
+        self.simulate = True
+        self.simulatedFootswitchLatched = val
+
+    def simulateStopSwitch(self, val=False, toggle=False):
+        self.simulate = True
+        if toggle:
+            self.simulatedStopswitch = not self.simulatedStopswitch
+        else:
+            self.simulatedStopswitch = val
 
     # -------------------------------------------------------------------------
     def setup(self, port, baudrate):
