@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 import serial
@@ -6,6 +7,7 @@ from threading import Lock, Event
 from queue import SimpleQueue
 import re
 from enum import Enum, auto, IntEnum
+import random
 
 from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
 
@@ -33,15 +35,24 @@ class Filler(QObject):
 
         # Serial interface
         self.ser = None
-        #self.port = '/dev/ttyUSB0'
-        self.port = '/dev/ttyACM0'
+
+        # Detect which comm device is connected (ACM0 for real system, USB0 for dev VM)
+        device1 = '/dev/ttyACM0'
+        device2 = '/dev/ttyUSB0'
+        if os.path.exists(device1):
+            self.port = device1
+        elif os.path.exists(device2):
+            self.port = device2
+        else:
+            raise Exception('Serial device not detected!')
+
         self.baudrate = 19200
         self.lastmessage = 0
 
         # Interface to callers
         self.requests = SimpleQueue()
         self._weight = 0.0
-        self._stable = False
+        self._weights = list()
         self._stopswitch = False
         self._footswitch = False
         self._footswitchLatched = False
@@ -121,14 +132,31 @@ class Filler(QObject):
         with self.lock: return self._weight
     @weight.setter
     def weight(self, val):
-        with self.lock: self._weight = val
+        with self.lock:
+            self._weight = val
+            self._weights.append(val)
+
+            # Trim the array to the last 10 weights
+            while len(self._weights) > 10:
+                self._weights = self._weights[1:]
 
     @property
     def stable(self):
-        with self.lock: return self._stable
-    @stable.setter
-    def stable(self, val):
-        with self.lock: self._stable = val
+        with self.lock:
+
+            # Once we have enough values to work with...
+            if len(self._weights) > 2:
+
+                # The weight value is stable if the last 10 vals are within 0.1g of the most recent value
+                latest = self._weights[-1]
+
+                for val in self._weights[:-1]:
+                    if val > (latest + 0.1):
+                        return False
+                    if val < (latest - 0.1):
+                        return False
+
+            return True
 
     @property
     def footswitch(self):
@@ -141,7 +169,7 @@ class Filler(QObject):
     def footswitchLatched(self):
         with self.lock: return self._footswitchLatched
 
-    @footswitch.setter
+    @footswitchLatched.setter
     def footswitchLatched(self, val):
         with self.lock: self._footswitchLatched = val
 
@@ -292,11 +320,6 @@ class Filler(QObject):
 
     def stop(self):
         self._stop.set()
-
-    def baz(self):
-        #ser.write(b'*IDN?\n')
-        # ser.write(b'ERR?\n')
-        pass
 
     # -------------------------------------------------------------------------
     def main(self):

@@ -1,0 +1,187 @@
+import os
+import configparser
+import logging
+from enum import IntEnum, auto
+
+# Configuration of the product
+INI_FILENAME = 'philler.ini'
+DEFAULT_PRODUCT = 'PRODUCT1'
+
+class CFG(IntEnum):
+    """
+    The master list of what can be configured with an INI file.
+    """
+    SPECIFIC_GRAVITY        = auto()
+    FILL_VOLUME             = auto()
+    FILL_WEIGHT             = auto()
+    FILL_PRESSURE           = auto()
+    FILL_CALC_DISPENSE_TIME = auto()
+    DISPENSE_RATE           = auto()
+    DISPENSE_OFFSET         = auto()
+    DISPLAY_PRESSURE        = auto()
+    PURGE_TIME              = auto()
+
+DEFAULT_ITEMS = dict()
+
+# Setup the defaults for product 1
+DEFAULT_ITEMS[DEFAULT_PRODUCT] = dict({
+
+    # configurable: display name, units, config name, type, default value
+    CFG.SPECIFIC_GRAVITY : ('Specific gravity', 'g/mL', 'product_specific_gravity', float, 0.91),
+    CFG.FILL_VOLUME : ('Fill volume', 'mL', 'fill_volume', float, 30.0),
+    CFG.FILL_WEIGHT : ('Fill weight', 'g', 'fill_weight', float, 27.3),
+    CFG.FILL_PRESSURE : ('Fill pressure (minimum)', 'psi', 'fill_pressure_minimum', float, 19.5),
+    CFG.FILL_CALC_DISPENSE_TIME : ('Fill calculation dispense time', 'ms', 'fill_calc_dispense_time', int, 1500),
+    CFG.DISPENSE_RATE : ('Dispense rate (slope)', 'g/msec', 'dispense_rate', float, 0.01),
+    CFG.DISPENSE_OFFSET : ('Dispense offset (intercept)', 'g', 'dispense_offset', float, 1.5),
+    CFG.DISPLAY_PRESSURE : ('Display pressure (maximum)', 'psi', 'pressure_display_max', float, 20.0),
+    CFG.PURGE_TIME : ('Purge time', 'ms', 'purge_time', int, 1000),
+})
+
+
+class Configuration():
+
+    class ConfigurableItem():
+        """A single configurable item"""
+        def __init__(self, displayname, units, configname, value, itemtype):
+            self._displayname = displayname
+            self._units = units
+            self._configname = configname
+            self._value = value
+            self._itemtype = itemtype
+
+            self._changed = False
+
+        @property
+        def displayname(self): return self._displayname
+
+        @property
+        def units(self): return self._units
+
+        @property
+        def configname(self): return self._configname
+
+        @property
+        def value(self): return self._value
+        @value.setter
+        def value(self, val):
+            self._value = val
+            self._changed = True
+
+        @property
+        def itemtype(self): return self._itemtype
+
+        @property
+        def changed(self): return self._changed
+
+    # Singleton instantiation
+    _instance = None
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(Configuration, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def __init__(self):
+        self.log = logging.getLogger('')
+
+        self.config = None
+        self.product = None
+        self.configurableItems = dict()
+
+    @property
+    def changed(self):
+        """Determine if any config items have changed"""
+        result = False
+        for item in self.configurableItems.values():
+            if item.changed:
+                result = True
+
+        return result
+
+    def load(self, filename, product):
+        """Load the INI file from disk"""
+        self.filename = filename
+        self.product = product
+
+        if self.config is None:
+            self.config = configparser.ConfigParser()
+            self.config.add_section(product)
+
+        # Load the config with the defaults, before overwriting with what's in the ini file
+        for configurable, values in DEFAULT_ITEMS[product].items():
+
+            # Break out the configurable properties
+            displayname, units, configname, itemtype, defaultvalue = values
+
+            # Assign the properties to the dict inside the configparser
+            self.config[product][configname] = f'{defaultvalue}'
+
+        # Create a new INI file if needed
+        if not os.path.exists(filename):
+            self.log.info(f'Creating a new config file: {filename}')
+            self.save()
+        else:
+            self.config.read(filename)
+
+        # Build the items dictionary
+        for configurable, values in DEFAULT_ITEMS[product].items():
+
+            # Break out the configurable properties
+            displayname, units, configname, itemtype, defaultvalue = values
+
+            # Create an item instance with the properly typed value
+            self.configurableItems[configurable] = self.ConfigurableItem(displayname, units, configname, itemtype(self.config[product][configname]), itemtype)
+
+    def save(self):
+        """Save the INI file to disk"""
+
+        # Sync the items to their configs, then save
+        for configurable, item in self.configurableItems.items():
+
+            # Update the config instance with any new values
+            self.config[self.product][item.configname] = f'{item.value}'
+
+        with open(self.filename, 'w') as configfile:
+            self.log.info(f'Saving config file to {self.filename}')
+            self.config.write(configfile)
+
+    def get(self, configurable):
+        """Get a configurable value with its properties"""
+
+        try:
+            # Verify we have an item for the desired configurable value
+            item = self.configurableItems[configurable]
+
+            return item.value, item.units, item.displayname, item.itemtype
+
+        except KeyError:
+            # Return something sane, but not useful
+            return 0.0, 'inv', '(invalid)'
+
+    def set(self, configurable, value, save=True):
+        """Get a configurable value with its properties"""
+
+        try:
+            # Verify we have an item for the desired configurable value
+            item = self.configurableItems[configurable]
+            oldvalue = item.value
+            item.value = value
+
+            self.log.info(f'Changed configurable {configurable}/{item.configname} from {oldvalue} to {value}')
+
+        except KeyError:
+            return False
+
+        # Typically we save it to a file unless directed otherwise
+        if save:
+            self.save()
+
+
+# -------------------------------------------------------------------------
+# Create a single instance of the configuration for global usage
+log = logging.getLogger('')
+log.info(f'Loading configuration for {DEFAULT_PRODUCT} from {INI_FILENAME}')
+config = Configuration()
+config.load(filename=INI_FILENAME, product=DEFAULT_PRODUCT)
+
+

@@ -1,17 +1,19 @@
 import sys
+import functools
 import os
 import random
 import argparse
+import configparser
 import coloredlogs, logging
-from threading import Lock, Event
 from enum import Enum, auto, IntEnum
-from queue import Queue, SimpleQueue
+from queue import SimpleQueue
 
 from PyQt5 import QtCore, QtWidgets, uic, QtMultimedia
-from PyQt5.QtWidgets import QMessageBox, QLabel, QPushButton, QToolButton, QGridLayout
+from PyQt5.QtWidgets import QMessageBox, QLabel, QPushButton, QToolButton, QGridLayout, QSpacerItem, QSizePolicy
 from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QPen, QColor, QImage, QPixmap
+from PyQt5.QtGui import QFont
 
+import Configuration
 from Hardware import Filler
 from Sequencer import Sequencer
 from CountdownTimer import CountdownTimer
@@ -26,6 +28,12 @@ log = logging.getLogger('')
 # Disable the debug logging from Qt
 logging.getLogger('PyQt5').setLevel(logging.WARNING)
 
+# -------------------------------------------------------------------------
+# Set windowed to control full screen display on RPi, or windowed display in a VM
+windowed = False
+
+PHILLER_FONT = 'Montserrat Medium'
+
 # Variables for simulated I/O
 simulate = False
 simFootSwitchState = False
@@ -38,6 +46,7 @@ class PAGES(Enum):
     DIAG = auto()
     FILL = auto()
     CLEAN= auto()
+    SETUP= auto()
 
 def showDialog(text, yes=False, cancel=False):
     """
@@ -70,7 +79,6 @@ def showDialog(text, yes=False, cancel=False):
     else:
         return False
 
-
 class FillingSequencer(Sequencer):
 
     class STATES(IntEnum):
@@ -82,6 +90,7 @@ class FillingSequencer(Sequencer):
         # Main screens
         STANDBY                     = auto()
         DIAGNOSTICS                 = auto()
+        SETUP                       = auto()
 
         # Bottle filling sequence
         FILL_START1                 = auto()
@@ -140,6 +149,10 @@ class FillingSequencer(Sequencer):
         DIAG_PRESSURE_ON            = auto()
         DIAG_PRESSURE_OFF           = auto()
         DIAG_DISPENSE               = auto()
+        DIAG_SETUP                  = auto()
+
+        # Setup screen
+        SETUP_SAVE                  = auto()
 
     # The messages that are shown on the progress screen.  Set the second parameter to FALSE to prevent the user from
     # pressing the button to proceed (some other condition will allow proceeding).
@@ -165,6 +178,9 @@ class FillingSequencer(Sequencer):
 
         # Retain a reference to the filler hardware
         self.filler = filler
+
+        # Get a ref to the system config
+        self.config = Configuration.config
 
         # Setup the sequencer with the states we plan to use
         self.prepare(self.STATES)
@@ -262,6 +278,20 @@ class FillingSequencer(Sequencer):
         if req in [self.BUTTONS.DIAG_DISPENSE]:
             self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.dispense_param)
 
+        if req in [self.BUTTONS.DIAG_SETUP]:
+            self.to_SETUP()
+
+    # -------------------------------------------------------------------------
+    def process_SETUP(self):
+        """Run the setup screen"""
+        req = self.getRequest()
+
+        if req in [self.BUTTONS.EXIT]:
+            self.to_DIAGNOSTICS()
+
+        if req in [self.BUTTONS.SETUP_SAVE]:
+            # Save the config
+            pass
 
     # -------------------------------------------------------------------------
     def process_FILL_START1(self):
@@ -517,6 +547,10 @@ class MainWindow(QtWidgets.QMainWindow):
         b_fill_next               = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
         pb_pressure               = QtWidgets.QProgressBar         # type: QtWidgets.QProgressBar
 
+        l_weight                  = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        l_weight_neg              = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        l_weight_g                = QtWidgets.QLabel               # type: QtWidgets.QLabel
+
         # Clean system panel
         b_clean_back              = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
 
@@ -532,13 +566,13 @@ class MainWindow(QtWidgets.QMainWindow):
         b_diag_pressure_off       = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
         le_diag_dispense_time     = QtWidgets.QLineEdit            # type: QtWidgets.QLineEdit
         b_diag_dispense           = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        b_diag_setup              = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
 
+        # Setup panel
+        b_setup_save              = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        b_setup_back              = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        gl_setup_configurables    = QtWidgets.QGridLayout          # type: QtWidgets.QGridLayout
 
-        #b_go                      = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
-
-        l_weight                  = QtWidgets.QLabel               # type: QtWidgets.QLabel
-        l_weight_neg              = QtWidgets.QLabel               # type: QtWidgets.QLabel
-        l_weight_g                = QtWidgets.QLabel               # type: QtWidgets.QLabel
 
         def __init__(self, form):
             """
@@ -583,10 +617,15 @@ class MainWindow(QtWidgets.QMainWindow):
     # -----------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
 
+        global windowed
+
         self.popups = {}
         self.template = None
 
         QtWidgets.QMainWindow.__init__(self, *args, **kwargs)
+
+        # Get a ref to the system config
+        self.config = Configuration.config
 
         # Load the UI file
         filename = 'Philler_Main.ui'
@@ -594,10 +633,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Find the widgets
         self.w = self.RefWidgets(self)
-
         self.setupUi()
-        self.show()
-        #self.showFullScreen()
+
+        if windowed:
+            self.show()
+        else:
+            self.showFullScreen()
 
     # -----------------------------------------------------------------------------
     def setupUi(self):
@@ -694,10 +735,81 @@ class MainWindow(QtWidgets.QMainWindow):
             self.w.b_clean_back,
             # Diagnostics panel
             self.w.b_main_diagnostics, self.w.b_diag_back, self.w.b_diag_sound_test,
-            self.w.b_diag_pressure_on, self.w.b_diag_pressure_off, self.w.b_diag_dispense]:
+            self.w.b_diag_pressure_on, self.w.b_diag_pressure_off, self.w.b_diag_dispense, self.w.b_diag_setup,
+            # Setup panel
+            self.w.b_setup_save, self.w.b_setup_back,
+            ]:
 
             button.clicked.connect(self.buttonClicked)
 
+        # Build the setup screen
+        self.setupConfigurables()
+
+
+    def setupConfigurables(self):
+        """Setup the configurable items"""
+        for index, cfg in enumerate(Configuration.CFG):
+            value, units, displayname, _ = self.config.get(cfg)
+
+            displayname_label = QLabel(displayname)
+            displayname_label.setFont(QFont(PHILLER_FONT, 18))
+
+            value_label = QLabel(f'{value} {units}')
+            value_label.setFont(QFont(PHILLER_FONT, 18))
+            value_label.setStyleSheet('color: blue')
+
+            update_button = QPushButton('Update')
+            update_button.setFont(QFont(PHILLER_FONT, 18))
+
+            """Bind the cfg parameter late because of:
+            https://stackoverflow.com/questions/19837486/lambda-in-a-loop
+            """
+            update_button.clicked.connect(functools.partial(self.changeConfigurable, cfg))
+
+            self.w.gl_setup_configurables.addWidget(displayname_label, index, 0)
+            self.w.gl_setup_configurables.addWidget(value_label, index, 1)
+            self.w.gl_setup_configurables.addWidget(update_button, index, 2)
+
+        verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.w.gl_setup_configurables.addItem(verticalSpacer)
+
+    def changeConfigurable(self, configurable):
+        """Change the value of a configuration item based on a user input"""
+        oldvalue, _, displayname, itemtype = self.config.get(configurable)
+
+        # Create a message box
+        msgbox = QtWidgets.QMessageBox()
+        msgbox.setIcon(QMessageBox.Question)
+        msgbox.setText(f'New value for "{displayname}":')
+        msgbox.setWindowTitle('Change a configuration')
+        msgbox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+        # Get the grid layout
+        layout = msgbox.layout() # type: QGridLayout
+        le = QtWidgets.QLineEdit()
+        le.setMinimumSize(100, 20)
+
+        # Jam the line edit into the layout of the message box at row 1, column 1
+        layout.addWidget(le, 1, 1, 1, layout.columnCount(), Qt.AlignCenter)
+
+        # Focus the user on the edit field
+        le.setFocus()
+
+        # Test the return from the message box
+        newval = None
+        returnvalue = msgbox.exec()
+        if returnvalue in [QMessageBox.Ok, QMessageBox.Yes]:
+
+            # Make sure the new value is of the right type
+            val = le.text()
+            try:
+                newval = itemtype(le.text())
+            except:
+                showDialog(f'Unable to convert "{val}" to type {itemtype.__name__}!')
+                return
+
+        # Update the value in the INI file
+        self.config.set(configurable, newval, save=True)
 
     def selectPanel(self, panel):
         """Select one of the stacked main panels"""
@@ -716,7 +828,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.l_connected.setText('DISCONNECTED')
             self.l_connected.setStyleSheet('color: red')
 
-        """Update the widgets that display values from the filler device"""
+        # Update the widgets that display values from the filler device
         weight_val = self.filler.weight
         pressure_val = self.filler.pressure
         foot_switch_val = ['Off', 'On'][self.filler.footswitch]
@@ -724,7 +836,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Diagnostics page
         self.w.l_diag_weight_value.setText(f'{weight_val:03.2f} g')
-        self.w.l_diag_pressure_value.setText(f'{pressure_val:03.2f} psi')
+        self.w.l_diag_pressure_value.setText(f'{pressure_val:03.1f} psi')
         self.w.l_diag_foot_switch.setText(foot_switch_val)
         self.w.l_diag_stop_switch.setText(stop_switch_val)
 
@@ -734,8 +846,16 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.w.l_weight_neg.setText('-')
 
+        # Display the 'g' symbol when the value is stable
+        if self.filler.stable:
+            self.w.l_weight_g.setText('g')
+        else:
+            self.w.l_weight_g.setText(' ')
+
+        # Display the weight value
         self.w.l_weight.setText(f'{abs(weight_val):03.2f}')
 
+        # Display the pressure value as a progress bar
         self.w.pb_pressure.setValue(round(pressure_val))
 
     def fillerChanged(self):
@@ -763,6 +883,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         elif self.seq.state in [states.DIAGNOSTICS]:
             self.selectPanel(PAGES.DIAG)
+
+        elif self.seq.state in [states.SETUP]:
+            self.selectPanel(PAGES.SETUP)
 
         elif self.seq.state in fillStates:
             self.selectPanel(PAGES.FILL)
@@ -828,6 +951,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.seq.request(buttons.DIAG_DISPENSE)
 
+        elif origin == self.w.b_diag_setup:
+            self.seq.request(buttons.DIAG_SETUP)
+
+        # Setup related buttons
+        elif origin == self.w.b_setup_save:
+            self.seq.request(buttons.SETUP_SAVE)
+
+        elif origin == self.w.b_setup_back:
+            self.seq.request(buttons.EXIT)
+
         # Simulated I/O buttons
         elif origin == self.b_foot_switch_simulate:
             self.seq.request(buttons.SIM_FOOT_SWITCH)
@@ -862,6 +995,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Philler')
     #parser.add_argument('-d', '--debug', help='Enable debugging output', action='store_true')
     parser.add_argument('-s', '--simulate', help='Enable simulation of I/O', action='store_true')
+    parser.add_argument('-w', '--windowed', help='Display in a window (not full screen)', action='store_true')
     args = parser.parse_args()
 
     # Get the debug argument first, as it drives our logging choices
@@ -872,7 +1006,8 @@ if __name__ == '__main__':
         log.critical('SIMULATING I/O')
         simulate = True
 
-
+    if args.windowed:
+        windowed = True
 
     # GUI
     app = QtWidgets.QApplication(sys.argv)
