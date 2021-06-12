@@ -6,14 +6,11 @@ import traceback
 from threading import Lock, Event
 from queue import SimpleQueue
 import re
-from enum import Enum, auto, IntEnum
-import random
+from enum import auto, IntEnum
 
 from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
 
 log = logging.getLogger('')
-#logging.getLogger('serial').setLevel(logging.WARNING)
-
 
 class Filler(QObject):
 

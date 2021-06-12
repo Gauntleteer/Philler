@@ -20,6 +20,7 @@ class CFG(IntEnum):
     DISPENSE_OFFSET         = auto()
     DISPLAY_PRESSURE        = auto()
     PURGE_TIME              = auto()
+    TARE_TOLERANCE          = auto()
 
 DEFAULT_ITEMS = dict()
 
@@ -36,6 +37,7 @@ DEFAULT_ITEMS[DEFAULT_PRODUCT] = dict({
     CFG.DISPENSE_OFFSET : ('Dispense offset (intercept)', 'g', 'dispense_offset', float, 1.5),
     CFG.DISPLAY_PRESSURE : ('Display pressure (maximum)', 'psi', 'pressure_display_max', float, 20.0),
     CFG.PURGE_TIME : ('Purge time', 'ms', 'purge_time', int, 1000),
+    CFG.TARE_TOLERANCE : ('Tare tolerance', 'g', 'tare_tolerance', float, 0.3)
 })
 
 
@@ -107,6 +109,10 @@ class Configuration():
             self.config = configparser.ConfigParser()
             self.config.add_section(product)
 
+            # Make a second config parser to detect that we have new items to save
+            self.configCheck = configparser.ConfigParser()
+            self.configCheck.add_section(product)
+
         # Load the config with the defaults, before overwriting with what's in the ini file
         for configurable, values in DEFAULT_ITEMS[product].items():
 
@@ -122,6 +128,20 @@ class Configuration():
             self.save()
         else:
             self.config.read(filename)
+            self.configCheck.read(filename)
+
+        # Iterate the entries in the file on disk and determine if we have new ones that need saving
+        needsSaving = False
+        for item, value in self.config[product].items():
+            try:
+                self.configCheck[product][item]
+            except KeyError:
+                self.log.debug(f'New INI item detected: {item}')
+                needsSaving = True
+
+        if needsSaving:
+            self.log.info(f'INI file has new entries and needs saving.')
+            self.save()
 
         # Build the items dictionary
         for configurable, values in DEFAULT_ITEMS[product].items():

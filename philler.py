@@ -1,10 +1,22 @@
+import coloredlogs, logging
+
+# -------------------------------------------------------------------------
+# Set up the base logger
+coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s [%(levelname)s] %(message)s'
+coloredlogs.DEFAULT_DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
+coloredlogs.install(level='DEBUG')
+log = logging.getLogger('')
+
+# Disable the debug logging from Qt
+logging.getLogger('PyQt5').setLevel(logging.WARNING)
+
+import math
 import sys
 import functools
 import os
 import random
 import argparse
 import configparser
-import coloredlogs, logging
 from enum import Enum, auto, IntEnum
 from queue import SimpleQueue
 
@@ -21,16 +33,6 @@ from Sequencer import Sequencer
 from CountdownTimer import CountdownTimer
 
 # -------------------------------------------------------------------------
-# Set up the base logger
-coloredlogs.DEFAULT_LOG_FORMAT = '%(asctime)s [%(levelname)s] %(message)s'
-coloredlogs.DEFAULT_DATE_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
-coloredlogs.install(level='DEBUG')
-log = logging.getLogger('')
-
-# Disable the debug logging from Qt
-logging.getLogger('PyQt5').setLevel(logging.WARNING)
-
-# -------------------------------------------------------------------------
 # Set windowed to control full screen display on RPi, or windowed display in a VM
 windowed = False
 
@@ -38,17 +40,16 @@ PHILLER_FONT = 'Montserrat Medium'
 
 # Variables for simulated I/O
 simulate = False
-simFootSwitchState = False
 
 class PAGES(Enum):
     """
     The pages in the application.
     """
-    MAIN = 0  # Start numbering at 0
-    DIAG = auto()
-    FILL = auto()
-    CLEAN= auto()
-    SETUP= auto()
+    MAIN  = 0  # Start numbering at 0
+    DIAG  = auto()
+    FILL  = auto()
+    CLEAN = auto()
+    SETUP = auto()
 
 def showDialog(text, yes=False, cancel=False):
     """
@@ -95,15 +96,19 @@ class FillingSequencer(Sequencer):
         SETUP                       = auto()
 
         # Bottle filling sequence
-        FILL_START1                 = auto()
-        FILL_START2                 = auto()
-        FILL_START3                 = auto()
-        FILL_PRESSURIZE             = auto()
-        FILL_PURGE_INIT             = auto()
-        FILL_PURGE_SETUP            = auto()
-        FILL_PURGE_WAIT             = auto()
-        FILL_READY_SETUP            = auto()
-        FILL_READY_WAIT             = auto()
+        FILL_PREP1                  = auto() # Display setup screen 1
+        FILL_PREP2                  = auto() # Display setup screen 2
+        FILL_RESET_STOP             = auto() # Wait for user to reset the STOP switch
+        FILL_PRESSURIZE             = auto() # Pressurize the system
+
+        FILL_PURGE_INIT             = auto() # Clear foot switch latch
+        FILL_PURGE_SETUP            = auto() # Prompt user to purge w/foot switch
+        FILL_PURGE_WAIT             = auto() # Sent purge pulse, waiting for completion
+
+        #FILL_LOAD_SETUP             = auto() # Prompt user to load a bottle
+
+        FILL_READY_SETUP            = auto() # Clear foot switch latch
+        FILL_READY_WAIT             = auto() # Wait for foot switch
         FILL_FILLING                = auto()
         FILL_FILLING_WAIT           = auto()
         FILL_FILLING_RESET          = auto()
@@ -151,27 +156,13 @@ class FillingSequencer(Sequencer):
         # Setup screen
         #SETUP_SAVE                  = auto()
 
-    # The messages that are shown on the progress screen.  Set the second parameter to FALSE to prevent the user from
-    # pressing the button to proceed (some other condition will allow proceeding).
-    messages = dict({
-        STATES.FILL_START1: ('Verify clean drip\n tray installed,\nwith no bottle.\n\n(Tap to continue)', True),
-        STATES.FILL_START2: ('Connect filled bulk\ncontainer, air in\nand liquid out.\n\nConnect compressor\nair tubing.\n\nStart compressor.\n\n(Tap to continue)', True),
-        STATES.FILL_START3: ('Reset the stop switch.', True),
-        STATES.FILL_PRESSURIZE: ('Pressurizing...', False),
-        #STATES.FILL_PURGE_INIT: ('', False),
-        STATES.FILL_PURGE_SETUP: ('Ready for purging.\n\nPlace waste cup under\nnozzle.\n\nPress foot switch to\npurge tubing, until\nall air is removed.\n\nRemove waste cup.\n\n(Tap to continue)', True),
-        STATES.FILL_PURGE_WAIT: ('Purging...', False),
-        STATES.FILL_READY_WAIT: ('Ready to fill bottle.\n\nPlace a bottle on\nscale under dispense\nneedle.  Press foot\nswitch once to fill\nbottle.', False),
-        #STATES.FILL_FILLING: ('', True),
-        STATES.FILL_FILLING_WAIT: ('Filling...', False),
-        #STATES.FILL_FILLING_RESET: ('', True),
-        #STATES.FILL_END: ('', True),
-        #STATES.FILL_TERMINATE: ('', True),
-    })
-
-
     def __init__(self, filler):
         super(FillingSequencer, self).__init__()
+
+        # The messages that are shown on the progress screen.  Each dict entry is a tuple (message, flag).  Set the
+        # flag parameter to FALSE to prevent the user from pressing the button to proceed (some other condition will
+        # allow proceeding).
+        self.messages = dict()
 
         # Retain a reference to the filler hardware
         self.filler = filler
@@ -190,8 +181,12 @@ class FillingSequencer(Sequencer):
         # A queue for requests from the user
         self.requests = SimpleQueue()
 
-        # TODO: FIX THIS HORRIBLE HACK
-        self.dispense_param = 250
+        # Diagnostic page dispense value for testing
+        self.diagDispense = 250
+
+        # Retain weight values for detecting loading/unloading of bottles
+        self.weightUnloaded = 0.0
+        self.weightWithBottle = 0.0
 
     @property
     def message(self):
@@ -203,6 +198,10 @@ class FillingSequencer(Sequencer):
             enable = False
 
         return text, enable
+
+    def setMessage(self, message, enable):
+        """Set the message for the current state"""
+        self.messages[self.state] = (message, enable)
 
     # -------------------------------------------------------------------------
     def request(self, button):
@@ -252,7 +251,7 @@ class FillingSequencer(Sequencer):
         req = self.getRequest()
 
         if req in [self.BUTTONS.MAIN_ENTER_FILL]:
-            self.to_FILL_START1()
+            self.to_FILL_PREP1()
         elif req in [self.BUTTONS.MAIN_ENTER_CLEAN]:
             self.to_CLEAN_START1()
         elif req in [self.BUTTONS.MAIN_ENTER_DIAGNOSTICS]:
@@ -273,7 +272,7 @@ class FillingSequencer(Sequencer):
             self.filler.request(task=self.filler.TASKS.VENT)
 
         if req in [self.BUTTONS.DIAG_DISPENSE]:
-            self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.dispense_param)
+            self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.diagDispense)
 
         if req in [self.BUTTONS.DIAG_SETUP]:
             self.to_SETUP()
@@ -287,26 +286,44 @@ class FillingSequencer(Sequencer):
             self.to_DIAGNOSTICS()
 
     # -------------------------------------------------------------------------
-    def process_FILL_START1(self):
+    def process_FILL_PREP1(self):
         """First filling screen page"""
+
+        # Determine if scale is tared
+        tolerance = self.config.getValue(CFG.TARE_TOLERANCE)
+        tared = (tolerance >= self.filler.weight >= -tolerance)
+
+        if tared:
+            self.setMessage('Verify clean drip\n tray installed,\nwith no bottle.\n\n(Tap to continue)', True)
+        else:
+            self.setMessage(f'Verify clean drip\n tray installed,\nwith no bottle.\n\nTare scale (0 +/- {tolerance}g).\n\n(Tap to continue)', False)
+
         req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
         if req in [self.BUTTONS.FILL_NEXT]:
-            self.to_FILL_START2()
+            self.to_FILL_PREP2()
 
-    def process_FILL_START2(self):
+    def process_FILL_PREP2(self):
         """Second filling screen page"""
         req = self.getRequest()
 
+        self.setMessage('Connect filled bulk\ncontainer, air in\nand liquid out.\n\nConnect compressor\nair tubing.\n\nStart compressor.\n\n(Tap to continue)',True)
+
+        # Retain the current weight, as there should be no bottle present
+        self.weightUnloaded = self.filler.weight
+
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
         if req in [self.BUTTONS.FILL_NEXT]:
-            self.to_FILL_START3()
+            self.to_FILL_RESET_STOP()
 
-    def process_FILL_START3(self):
+    def process_FILL_RESET_STOP(self):
         """Wait for the stop switch here"""
+
+        self.setMessage('Reset the stop switch.', True)
+
         req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
@@ -317,6 +334,9 @@ class FillingSequencer(Sequencer):
             self.to_FILL_PRESSURIZE()
 
     def process_FILL_PRESSURIZE(self):
+
+        self.setMessage('Pressurizing...', False)
+
         req = self.getRequest()
 
         # Advance to the next state when the pressure is over 20
@@ -328,10 +348,13 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_PURGE_INIT(self):
         """Init the purge state by clearing any previous foot switches"""
-        self.filler.footswitch = False
+        self.filler.footswitchLatched = False
         self.to_FILL_PURGE_SETUP()
 
     def process_FILL_PURGE_SETUP(self):
+
+        self.setMessage('Ready for purging.\n\nPlace waste cup under\nnozzle.\n\nPress foot switch to\npurge tubing, until\nall air is removed.\n\nRemove waste cup.\n\n(Tap to continue)', True)
+
         req = self.getRequest()
 
         # Wait for a footswitch
@@ -357,6 +380,9 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_PURGE_WAIT(self):
         """Wait for the purge pulse to complete"""
+
+        self.setMessage('Purging...', False)
+
         if self.timer.expired:
             self.to_FILL_PURGE_SETUP()
 
@@ -375,6 +401,9 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_READY_WAIT(self):
         """Waiting for user to hit the foot switch to do a fill"""
+
+        self.setMessage('Ready to fill bottle.\n\nPlace a bottle on\nscale under dispense\nneedle.  Press foot\nswitch once to fill\nbottle.', False)
+
         req = self.getRequest()
 
         # Wait for a footswitch, or use the faked I/O
@@ -404,6 +433,8 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_FILLING_WAIT(self):
         """Wait for the fill to complete"""
+
+        self.setMessage('Filling...', False)
 
         # Look for timeout
         if self.timer.expired:
@@ -738,6 +769,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setupConfigurables(self):
         """Setup the configurable items"""
+
+        # Clear out any previous configurable items
+        layout = self.w.gl_setup_configurables
+
+        while layout.count():
+            item = layout.takeAt(0)
+
+            if type(item) in [QtWidgets.QGridLayout, QtWidgets.QVBoxLayout, QtWidgets.QHBoxLayout]:
+                self.clearwidgets(item)
+                layout.removeItem(item)
+
+            if not item:
+                continue
+
+            w = item.widget()
+            if w:
+                w.setParent(None)
+
+        # Build the GUI elements for the configurables
         for index, cfg in enumerate(Configuration.CFG):
             value, units, displayname, _ = self.config.get(cfg)
 
@@ -757,13 +807,13 @@ class MainWindow(QtWidgets.QMainWindow):
             """
             update_button.clicked.connect(functools.partial(self.changeConfigurable, cfg))
 
-            self.w.gl_setup_configurables.addWidget(displayname_label, index, 0)
-            self.w.gl_setup_configurables.addWidget(value_label, index, 1)
-            self.w.gl_setup_configurables.addWidget(update_button, index, 2)
+            layout.addWidget(displayname_label, index, 0)
+            layout.addWidget(value_label, index, 1)
+            layout.addWidget(update_button, index, 2)
 
         # Finish off with a spacer that pushes everything up to the top
         verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.w.gl_setup_configurables.addItem(verticalSpacer)
+        layout.addItem(verticalSpacer)
 
     def changeConfigurable(self, configurable):
         """Change the value of a configuration item based on a user input"""
@@ -803,6 +853,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Update the value in the INI file
         self.config.set(configurable, newval, save=True)
 
+        # Update the values shown on screen
+        self.setupConfigurables()
+
     def selectPanel(self, panel):
         """Select one of the stacked main panels"""
         self.w.sw_pages.setCurrentIndex(panel.value)
@@ -823,8 +876,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # Update the widgets that display values from the filler device
         weight_val = self.filler.weight
         pressure_val = self.filler.pressure
-        foot_switch_val = ['Off', 'On'][self.filler.footswitch]
-        stop_switch_val = ['Off', 'On'][self.filler.stopswitch]
+        foot_switch_val = ['OFF', 'ON'][self.filler.footswitch]
+        stop_switch_val = ['OFF', 'ON'][self.filler.stopswitch]
 
         # Diagnostics page
         self.w.l_diag_weight_value.setText(f'{weight_val:03.2f} g')
@@ -850,6 +903,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Display the pressure value as a progress bar
         self.w.pb_pressure.setValue(round(pressure_val))
 
+        # Update the max pressure scale
         max = self.config.getValue(CFG.DISPLAY_PRESSURE)
         self.w.pb_pressure.setMaximum(round(max))
 
@@ -869,7 +923,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def updateState(self):
         """Update the screen to match the state machine"""
         states = self.seq.STATES
-        fillStates = [state for state in range(states.FILL_START1, states.FILL_TERMINATE)]
+        fillStates = [state for state in range(states.FILL_PREP1, states.FILL_TERMINATE)]
         cleanStates = [state for state in range(states.CLEAN_START1, states.CLEAN_TERMINATE)]
 
         # Set the right panel
@@ -893,9 +947,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def buttonClicked(self):
-        """Handle buttons being clicked"""
-        global simFootSwitchState
-
+        """Handle button clicks"""
         success = True
         message = ''
 
@@ -940,7 +992,7 @@ class MainWindow(QtWidgets.QMainWindow):
         elif origin == self.w.b_diag_dispense:
             try:
                 text = self.w.le_diag_dispense_time.text()
-                self.seq.dispense_param = int(text)
+                self.seq.diagDispense = int(text)
             except:
                 showDialog(f'Text: "{text}" not a valid integer!')
 
