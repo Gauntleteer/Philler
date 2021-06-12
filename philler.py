@@ -107,6 +107,7 @@ class FillingSequencer(Sequencer):
         FILL_PURGE_CLEAR_WAIT       = auto() # Ensure user removed purge capture bottle
         FILL_PURGE_RESET_WAIT       = auto() # Waiting for user to remove/dump purge capture bottle
 
+        FILL_CLEAR_BOTTLE           = auto() # Ensure no bottle is removed before next fill
         FILL_LOAD_BOTTLE            = auto() # Prompt user to load a bottle
         FILL_LOAD_BOTTLE_WAIT       = auto() # Prompt user to load a bottle
 
@@ -117,7 +118,7 @@ class FillingSequencer(Sequencer):
         FILL_INIT_FILLING_WAIT      = auto()
 
         FILL_FILLING_WAIT           = auto()
-        FILL_FILLING_RESET          = auto()
+        FILL_FILLING_FAILED         = auto()
         FILL_END                    = auto()
         FILL_TERMINATE              = auto()
 
@@ -199,6 +200,9 @@ class FillingSequencer(Sequencer):
 
         # Count how many times the user purged into a bottle
         self.purgeCount = 0
+
+        # Count how many bottles filled
+        self.filledCount = 0
 
     @property
     def message(self):
@@ -377,7 +381,7 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_PURGE_SETUP(self):
         """Wait for footswitch or screen tap to purge the nozzle"""
-        self.setMessage('Ready for purging.\n\nPlace a bottle under\nneedle.\n\nPress foot switch to\npurge tubing, until\nall air is removed.\n\nRemove waste cup.\n\n(Tap to continue)', True)
+        self.setMessage('Ready for purging.\n\nPlace a bottle under\nneedle.\n\nPress foot switch to\npurge tubing, until\nall air is removed.\n\nRemove bottle.\n\n(Tap to continue)', True)
 
         # Wait for a footswitch
         if self.filler.footswitchLatched:
@@ -456,16 +460,31 @@ class FillingSequencer(Sequencer):
     # -------------------------------------------------------------------------
     # FILLING
     # -------------------------------------------------------------------------
+    def process_FILL_CLEAR_BOTTLE(self):
+        """Make sure we return to (nearly) tared 0 weight"""
+        self.setMessage(f'Remove bottle.\n\n{self.filledCount} bottle(s) filled.', False)
+
+        tolerance = self.config.getValue(CFG.TARE_TOLERANCE)
+        tared = (tolerance >= self.filler.weight >= -tolerance)
+
+        # Wait for the user to remove the bottle (from the previous fill)
+        if tared:
+            self.to_FILL_LOAD_BOTTLE()
+
+        req = self.getRequest()
+        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+            self.to_FILL_TERMINATE()
+
     def process_FILL_LOAD_BOTTLE(self):
         """Bottle loading step"""
         self.setMessage('Place a bottle\nunder the filling\nneedle.', False)
 
+        # Clear the stable flag (in case we are simulating here)
+        self.filler.clearStable()
+
         # Wait for the weight to increase by some minimum amount
         if self.filler.weight >= self.config.getValue(CFG.BOTTLE_MIN_WEIGHT):
             self.to_FILL_LOAD_BOTTLE_WAIT()
-
-        # Clear the stable flag (in case we are simulating here)
-        self.filler.clearStable()
 
         req = self.getRequest()
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
@@ -517,7 +536,6 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_INIT_FILLING(self):
         """Start an initial fill"""
-
         initFillTime = self.config.getValue(CFG.FILL_INIT_DISPENSE_TIME)
         self.filler.request(task=self.filler.TASKS.DISPENSE, param=initFillTime)
 
@@ -541,6 +559,9 @@ class FillingSequencer(Sequencer):
             # Wait for the scale to stop changing
             if self.filler.stable:
 
+                # Clear the stable flag (in case we are simulating here)
+                self.filler.clearStable()
+
                 # Reference the tunable options
                 initFillTime = self.config.getValue(CFG.FILL_INIT_DISPENSE_TIME) # nominally 1500ms
                 initFillMin = self.config.getValue(CFG.FILL_INIT_DISPENSE_MIN) # maybe 4g?
@@ -558,16 +579,16 @@ class FillingSequencer(Sequencer):
                     return
 
                 # Calculate filling rate
-                slope = (self.weightInitialFill - fillOffset) / initFillTime
+                slope = (weightInitialFill - fillOffset) / initFillTime
 
                 # How much do we have left to fill?
                 weightRemaining = (totalFillWeight - weightInitialFill)
 
                 # How long will it take to fill it?
-                self.finalDispenseTime = (weightRemaining - fillOffset) / slope
+                self.finalDispenseTime = math.trunc((weightRemaining - fillOffset) / slope)
 
                 log.debug(f'weightInitialFill = {weightInitialFill}')
-                log.debug(f'slope = {slope}')
+                log.debug(f'slope = {slope:0.2f}')
                 log.debug(f'weightRemaining = {weightRemaining}')
                 log.debug(f'finalDispenseTime = {self.finalDispenseTime}')
 
@@ -593,7 +614,7 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_FILLING_WAIT(self):
         """Wait for the final fill to complete"""
-        self.setMessage(f'Filling {self.finalDispenseTime} ms...', False)
+        self.setMessage(f'Filling for {self.finalDispenseTime} ms...', False)
 
         # Wait for fill to complete
         if self.timer.expired:
@@ -601,17 +622,31 @@ class FillingSequencer(Sequencer):
 
             # Wait for the scale to stop changing
             if self.filler.stable:
-                self.to_FILL_FILLING_RESET()
+
+                # Clear the stable flag (in case we are simulating here)
+                self.filler.clearStable()
+
+                # Did we get the desired amount of product?
+                desiredFillWeight = self.config.getValue(CFG.FILL_WEIGHT)  # nominally 28.12
+                actualWeight = self.filler.weight - self.weightWithBottle
+
+                log.debug(f'Delivered {actualWeight}g, desired = {desiredFillWeight}g')
+                if actualWeight >= desiredFillWeight:
+                    # Got what we wanted, fill another
+                    self.filledCount += 1
+                    self.to_FILL_CLEAR_BOTTLE()
+                else:
+                    # Low fill.  Abort.
+                    self.to_FILL_FILLING_FAILED()
 
         req = self.getRequest()
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
 
-    def process_FILL_FILLING_RESET(self):
-        self.setMessage(f'Filling reset state', False)
-
+    def process_FILL_FILLING_FAILED(self):
+        """Something failed in the final fill"""
+        self.setMessage(f'Fill failed, low\nweight delivered.\n\nBulk may be empty.\n\nDiagnose problem and\nstart fill again.\n\n(Tap to end)', True)
         req = self.getRequest()
-
         if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
             self.to_FILL_TERMINATE()
 
