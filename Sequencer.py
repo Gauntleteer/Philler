@@ -72,7 +72,12 @@ class Sequencer(QObject):
         :return: T/F on success/fail of the processing.
         """
         old = self.state.name
-        self.statemethods[self.state]()
+        try:
+            self.statemethods[self.state]()
+        except AttributeError as e:
+            log.critical(f'Exception during state processing: {e}')
+            return False
+
         new = self.state.name
         if old != new:
             self.debug(f'[{old}] -> [{new}]')

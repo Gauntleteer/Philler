@@ -5,14 +5,14 @@ class CountdownTimer:
     """
     Define a timer that counts down.  Resolution in seconds.
     """
-    def start(self, seconds=0, minutes=0, hours=0):
+    def start(self, milliseconds=0, seconds=0, minutes=0, hours=0):
         """
         Start the timer for the provided duration.
 
         :param duration: Length of timer, in seconds.
         :return: Nothing.
         """
-        self.timedelta = datetime.timedelta(seconds=seconds, minutes=minutes, hours=hours)
+        self.timedelta = datetime.timedelta(milliseconds=milliseconds, seconds=seconds, minutes=minutes, hours=hours)
         self.tstart = self.now
         self.tend = self.tstart + self.timedelta
 

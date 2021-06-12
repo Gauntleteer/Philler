@@ -29,6 +29,7 @@ class Filler(QObject):
         self.simulatedWeight = 0.0
         self.simulatedFootswitchLatched = False
         self.simulatedStopswitch = False
+        self.simulatedStable = False
 
         # Conversion factors
         self.PSIperCount = None
@@ -149,7 +150,7 @@ class Filler(QObject):
     @property
     def stable(self):
         if self.simulate:
-            return True
+            return self.simulatedStable
 
         with self.lock:
 
@@ -223,6 +224,14 @@ class Filler(QObject):
     def simulateWeight(self, val):
         self.simulate = True
         self.simulatedWeight = val
+        self.simulatedStable = False
+
+    def simulateStable(self, val):
+        self.simulate = True
+        self.simulatedStable = val
+
+    def clearStable(self):
+        self.simulatedStable = False
 
     def simulateFootswitch(self, val):
         self.simulate = True
