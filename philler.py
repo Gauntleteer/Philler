@@ -152,7 +152,7 @@ class FillingSequencer(Sequencer):
         DIAG_SETUP                  = auto()
 
         # Setup screen
-        SETUP_SAVE                  = auto()
+        #SETUP_SAVE                  = auto()
 
     # The messages that are shown on the progress screen.  Set the second parameter to FALSE to prevent the user from
     # pressing the button to proceed (some other condition will allow proceeding).
@@ -288,10 +288,6 @@ class FillingSequencer(Sequencer):
 
         if req in [self.BUTTONS.EXIT]:
             self.to_DIAGNOSTICS()
-
-        if req in [self.BUTTONS.SETUP_SAVE]:
-            # Save the config
-            pass
 
     # -------------------------------------------------------------------------
     def process_FILL_START1(self):
@@ -569,7 +565,6 @@ class MainWindow(QtWidgets.QMainWindow):
         b_diag_setup              = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
 
         # Setup panel
-        b_setup_save              = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
         b_setup_back              = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
         gl_setup_configurables    = QtWidgets.QGridLayout          # type: QtWidgets.QGridLayout
 
@@ -737,7 +732,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.w.b_main_diagnostics, self.w.b_diag_back, self.w.b_diag_sound_test,
             self.w.b_diag_pressure_on, self.w.b_diag_pressure_off, self.w.b_diag_dispense, self.w.b_diag_setup,
             # Setup panel
-            self.w.b_setup_save, self.w.b_setup_back,
+            self.w.b_setup_back,
             ]:
 
             button.clicked.connect(self.buttonClicked)
@@ -753,12 +748,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
             displayname_label = QLabel(displayname)
             displayname_label.setFont(QFont(PHILLER_FONT, 18))
+            displayname_label.setWordWrap(True)
 
             value_label = QLabel(f'{value} {units}')
             value_label.setFont(QFont(PHILLER_FONT, 18))
             value_label.setStyleSheet('color: blue')
 
-            update_button = QPushButton('Update')
+            update_button = QPushButton('UPDATE')
             update_button.setFont(QFont(PHILLER_FONT, 18))
 
             """Bind the cfg parameter late because of:
@@ -955,9 +951,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.seq.request(buttons.DIAG_SETUP)
 
         # Setup related buttons
-        elif origin == self.w.b_setup_save:
-            self.seq.request(buttons.SETUP_SAVE)
-
         elif origin == self.w.b_setup_back:
             self.seq.request(buttons.EXIT)
 
