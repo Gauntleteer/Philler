@@ -485,6 +485,7 @@ class FillingSequencer(Sequencer):
 
 
         # TODO - detect that user removed the bottle!
+        # TODO - detect that the user put a bottle that's too heavy on!
 
         req = self.getRequest()
         # Skip to next screen if user presses the button
@@ -528,7 +529,7 @@ class FillingSequencer(Sequencer):
         self.filler.request(task=self.filler.TASKS.DISPENSE, param=initFillTime)
 
         # Start a timer to wait at least as long as the fill will take
-        self.timer.start(milliseconds=(initFillTime+3000))
+        self.timer.start(milliseconds=(initFillTime+30000))
 
         # Clear the stable flag (in case we are simulating here)
         self.filler.clearStable()
@@ -567,6 +568,7 @@ class FillingSequencer(Sequencer):
                     return
 
                 # Calculate filling rate
+                # TODO - put a range on this to prevent long main dispense times
                 slope = (weightInitialFill - fillOffset) / initFillTime
 
                 # How much do we have left to fill?
@@ -576,17 +578,17 @@ class FillingSequencer(Sequencer):
                 self.finalDispenseTime = math.trunc((weightRemaining - fillOffset) / slope)
 
                 log.debug(f'pre fill weightWithBottle: {self.weightWithBottle:0.2f}')
-                log.debug(f'total initial fill weight: {self.filler.weight:0.2f}')
+                log.debug(f'total initial fill weight: {self.filler.weight:0.2f}g')
                 log.debug(f'difference weightInitialFill: {weightInitialFill:0.2f}g')
-                log.debug(f'slope: {slope:0.4f}')
-                log.debug(f'weightRemaining: {weightRemaining:0.2f}')
+                log.debug(f'slope: {slope:0.5f}')
+                log.debug(f'weightRemaining: {weightRemaining:0.2f}g')
                 log.debug(f'finalDispenseTime: {self.finalDispenseTime}ms')
 
                 # Trigger the final fill
                 self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.finalDispenseTime)
 
                 # Start a timer to wait at least as long as the fill will take
-                self.timer.start(milliseconds=(self.finalDispenseTime+3000))
+                self.timer.start(milliseconds=(self.finalDispenseTime+30000))
 
                 # Advance to state to wait for fill completion
                 self.to_FILL_FILLING_WAIT()
