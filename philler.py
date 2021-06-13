@@ -575,10 +575,10 @@ class FillingSequencer(Sequencer):
                 # How long will it take to fill it?
                 self.finalDispenseTime = math.trunc((weightRemaining - fillOffset) / slope)
 
-                log.debug(f'weightInitialFill = {weightInitialFill}')
-                log.debug(f'slope = {slope:0.2f}')
-                log.debug(f'weightRemaining = {weightRemaining}')
-                log.debug(f'finalDispenseTime = {self.finalDispenseTime}')
+                log.debug(f'weightInitialFill = {weightInitialFill:0.2f}g')
+                log.debug(f'slope = {slope:0.4f}')
+                log.debug(f'weightRemaining = {weightRemaining:0.2f}')
+                log.debug(f'finalDispenseTime = {self.finalDispenseTime}ms')
 
                 # Trigger the final fill
                 self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.finalDispenseTime)
