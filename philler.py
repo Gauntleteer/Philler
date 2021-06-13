@@ -498,7 +498,7 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_READY_SETUP(self):
         """Init the state by clearing any previous foot switches"""
-        self.filler.footswitch = False
+        self.filler.footswitchLatched = False
         self.to_FILL_READY_WAIT()
 
         # Handle the abort/exit buttons or stop switch
@@ -575,10 +575,12 @@ class FillingSequencer(Sequencer):
                 # How long will it take to fill it?
                 self.finalDispenseTime = math.trunc((weightRemaining - fillOffset) / slope)
 
-                log.debug(f'weightInitialFill = {weightInitialFill:0.2f}g')
-                log.debug(f'slope = {slope:0.4f}')
-                log.debug(f'weightRemaining = {weightRemaining:0.2f}')
-                log.debug(f'finalDispenseTime = {self.finalDispenseTime}ms')
+                log.debug(f'pre fill weightWithBottle: {self.weightWithBottle:0.2f}')
+                log.debug(f'total initial fill weight: {self.filler.weight:0.2f}')
+                log.debug(f'difference weightInitialFill: {weightInitialFill:0.2f}g')
+                log.debug(f'slope: {slope:0.4f}')
+                log.debug(f'weightRemaining: {weightRemaining:0.2f}')
+                log.debug(f'finalDispenseTime: {self.finalDispenseTime}ms')
 
                 # Trigger the final fill
                 self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.finalDispenseTime)
@@ -625,7 +627,10 @@ class FillingSequencer(Sequencer):
                 desiredFillWeight = self.config.getValue(CFG.FILL_WEIGHT)  # nominally 28.12
                 actualWeight = self.filler.weight - self.weightWithBottle
 
-                log.debug(f'Delivered {actualWeight}g, desired = {desiredFillWeight}g')
+                log.debug(f'Final weight: {self.filler.weight:0.2f}g')
+                log.debug(f'Delivered: {actualWeight:0.2f}g')
+                log.debug(f'Desired: {desiredFillWeight:0.2f}g')
+
                 if actualWeight >= desiredFillWeight:
                     # Got what we wanted, fill another
                     self.filledCount += 1
