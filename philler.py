@@ -483,6 +483,9 @@ class FillingSequencer(Sequencer):
                 self.weightWithBottle = self.filler.weight
                 self.to_FILL_READY_SETUP()
 
+
+        # TODO - detect that user removed the bottle!
+
         req = self.getRequest()
         # Skip to next screen if user presses the button
         if req in [self.BUTTONS.FILL_NEXT]:
@@ -638,7 +641,7 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_FILLING_FAILED(self):
         """Something failed in the final fill"""
-        self.setMessage(f'Low fill weight!\n\nBulk empty?\n\nPress stop switch.\nDisconnect bulk.\n\nDiscard short filled\nbottle.', True)
+        self.setMessage(f'Low fill weight!\n\nBulk empty?\n\nDiscard short filled\nbottle.\n\nPress stop to return\nto main menu.', True)
 
         # Wait for user to hit stop switch
         if self.filler.stopswitch: self.to_FILL_TERMINATE()
