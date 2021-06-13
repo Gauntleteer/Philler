@@ -16,7 +16,6 @@ import functools
 import os
 import random
 import argparse
-import configparser
 from enum import Enum, auto, IntEnum
 from queue import SimpleQueue
 
@@ -116,26 +115,15 @@ class FillingSequencer(Sequencer):
 
         FILL_INIT_FILLING           = auto()
         FILL_INIT_FILLING_WAIT      = auto()
-
+        FILL_INIT_FILLING_FAILED    = auto()
         FILL_FILLING_WAIT           = auto()
         FILL_FILLING_FAILED         = auto()
-        FILL_END                    = auto()
         FILL_TERMINATE              = auto()
 
         # Cleaning sequence
-        CLEAN_START1                = auto()
-        CLEAN_START2                = auto()
-        CLEAN_START3                = auto()
-        CLEAN_PRESSURIZE            = auto()
-        CLEAN_READY                 = auto()
-        CLEAN_CLEANING              = auto()
-        CLEAN_CLEANING_WAIT         = auto()
-        CLEAN_END                   = auto()
-        CLEAN_TERMINATE             = auto()
+        CLEAN                       = auto()
 
-        # Failure/terminal states
-        FAULT                       = auto()
-        TERMINATED                  = auto()
+        TERMINATE                   = auto()
 
     class BUTTONS(IntEnum):
         """Button inputs from the user"""
@@ -153,6 +141,9 @@ class FillingSequencer(Sequencer):
         FILL_NEXT                   = auto()
 
         # Clean screen
+        CLEAN_PRESSURE_ON           = auto()
+        CLEAN_PRESSURE_OFF          = auto()
+        CLEAN_DISPENSE              = auto()
 
         # Diagnostics screen
         DIAG_PRESSURE_ON            = auto()
@@ -234,29 +225,6 @@ class FillingSequencer(Sequencer):
         return req
 
     # -------------------------------------------------------------------------
-    def requestState(self, newState):
-        """Handle the external request to transition to a state"""
-
-        if newState in self.STATES:
-
-            if newState == self.STATES.STANDBY:
-                # Going back to standby, turn off anything that might be running
-                self.to_STANDBY()
-
-            if newState == self.STATES.DIAGNOSTICS:
-                self.to_DIAGNOSTICS()
-
-            if newState == self.STATES.FAULT:
-                # Going to fault: turn off anything that might be running
-                self.to_FAULT()
-
-
-            return True, ''
-
-        else:
-            return False, 'Invalid state requested!'
-
-    # -------------------------------------------------------------------------
     def process_UNINIT(self):
         """Process any init items here"""
         self.to_STANDBY()
@@ -269,7 +237,7 @@ class FillingSequencer(Sequencer):
         if req in [self.BUTTONS.MAIN_ENTER_FILL]:
             self.to_FILL_PREP1()
         elif req in [self.BUTTONS.MAIN_ENTER_CLEAN]:
-            self.to_CLEAN_START1()
+            self.to_CLEAN()
         elif req in [self.BUTTONS.MAIN_ENTER_DIAGNOSTICS]:
             self.to_DIAGNOSTICS()
 
@@ -322,8 +290,8 @@ class FillingSequencer(Sequencer):
         if req in [self.BUTTONS.FILL_NEXT]:
             self.to_FILL_PREP2()
 
-        # Handle the abort/exit buttons
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        # Handle the abort/exit buttons or stop switch
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_PREP2(self):
@@ -339,8 +307,8 @@ class FillingSequencer(Sequencer):
         if req in [self.BUTTONS.FILL_NEXT]:
             self.to_FILL_RESET_STOP()
 
-        # Handle the abort/exit buttons
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        # Handle the abort/exit buttons or stop switch
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_RESET_STOP(self):
@@ -351,9 +319,9 @@ class FillingSequencer(Sequencer):
         if not self.filler.stopswitch:
             self.to_FILL_PRESSURIZE()
 
-        # Handle the abort/exit buttons
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_PRESSURIZE(self):
@@ -365,9 +333,9 @@ class FillingSequencer(Sequencer):
         if self.filler.pressure >= self.config.getValue(CFG.FILL_PRESSURE):
             self.to_FILL_PURGE_SETUP()
 
-        # Handle the abort/exit buttons
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     # -------------------------------------------------------------------------
@@ -411,8 +379,8 @@ class FillingSequencer(Sequencer):
         if req in [self.BUTTONS.FILL_NEXT]:
             self.to_FILL_PURGE_CLEAR_WAIT()
 
-        # Handle the abort/exit buttons
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        # Handle the abort/exit buttons or stop switch
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_PURGE_WAIT(self):
@@ -422,8 +390,9 @@ class FillingSequencer(Sequencer):
         if self.timer.expired:
             self.to_FILL_PURGE_SETUP()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_PURGE_CLEAR_WAIT(self):
@@ -437,8 +406,9 @@ class FillingSequencer(Sequencer):
         if tared:
             self.to_FILL_LOAD_BOTTLE()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_PURGE_RESET_WAIT(self):
@@ -453,8 +423,9 @@ class FillingSequencer(Sequencer):
         if tared:
             self.to_FILL_PURGE_INIT()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     # -------------------------------------------------------------------------
@@ -471,8 +442,9 @@ class FillingSequencer(Sequencer):
         if tared:
             self.to_FILL_LOAD_BOTTLE()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_LOAD_BOTTLE(self):
@@ -486,8 +458,9 @@ class FillingSequencer(Sequencer):
         if self.filler.weight >= self.config.getValue(CFG.BOTTLE_MIN_WEIGHT):
             self.to_FILL_LOAD_BOTTLE_WAIT()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_LOAD_BOTTLE_WAIT(self):
@@ -507,7 +480,8 @@ class FillingSequencer(Sequencer):
             self.weightWithBottle = self.filler.weight
             self.to_FILL_READY_SETUP()
 
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        # Handle the abort/exit buttons or stop switch
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_READY_SETUP(self):
@@ -515,8 +489,9 @@ class FillingSequencer(Sequencer):
         self.filler.footswitch = False
         self.to_FILL_READY_WAIT()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_READY_WAIT(self):
@@ -530,8 +505,9 @@ class FillingSequencer(Sequencer):
             self.filler.footswitchLatched = False
             self.to_FILL_INIT_FILLING()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_INIT_FILLING(self):
@@ -601,16 +577,23 @@ class FillingSequencer(Sequencer):
                 # Advance to state to wait for fill completion
                 self.to_FILL_FILLING_WAIT()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_INIT_FILLING_FAILED(self):
         """Something failed in the init fill"""
         self.setMessage(f'Initial fill failed.\nDiagnose problem and\nstart fill again.\n\n(Tap to end)', True)
+
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if req in [self.BUTTONS.FILL_NEXT]:
             self.to_FILL_TERMINATE()
+
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
+            self.to_FILL_TERMINATE()
+
 
     def process_FILL_FILLING_WAIT(self):
         """Wait for the final fill to complete"""
@@ -639,21 +622,21 @@ class FillingSequencer(Sequencer):
                     # Low fill.  Abort.
                     self.to_FILL_FILLING_FAILED()
 
+        # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_FILLING_FAILED(self):
         """Something failed in the final fill"""
-        self.setMessage(f'Fill failed, low\nweight delivered.\n\nBulk may be empty.\n\nDiagnose problem and\nstart fill again.\n\n(Tap to end)', True)
-        req = self.getRequest()
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
-            self.to_FILL_TERMINATE()
+        self.setMessage(f'Low fill weight!\n\nBulk empty?\n\nPress stop switch.\nDisconnect bulk.\n\nDiscard short filled\nbottle.', True)
 
-    def process_FILL_END(self):
-        req = self.getRequest()
+        # Wait for user to hit stop switch
+        if self.filler.stopswitch: self.to_FILL_TERMINATE()
 
-        if req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]:
+        # Handle the abort/exit buttons or stop switch
+        req = self.getRequest()
+        if (req in [self.BUTTONS.EXIT, self.BUTTONS.ABORT]) or self.filler.stopswitch:
             self.to_FILL_TERMINATE()
 
     def process_FILL_TERMINATE(self):
@@ -671,67 +654,34 @@ class FillingSequencer(Sequencer):
     # -------------------------------------------------------------------------
     # CLEANING
     # -------------------------------------------------------------------------
-    def process_CLEAN_START1(self):
+    def process_CLEAN(self):
+        """Run the cleaning screen, not much to do here, state machine wise"""
+        cleanDispenseTime = self.config.getValue(CFG.CLEAN_DISPENSE)
+
         req = self.getRequest()
 
         if req in [self.BUTTONS.EXIT]:
-            self.to_CLEAN_TERMINATE()
+            # Zero out any pulse in progress
+            self.filler.request(task=self.filler.TASKS.ABORT)
 
-    def process_CLEAN_START2(self):
-        req = self.getRequest()
+            # Vent the bulk
+            self.filler.request(task=self.filler.TASKS.VENT)
 
-        if req in [self.BUTTONS.EXIT]:
-            self.to_CLEAN_TERMINATE()
+            self.to_STANDBY()
 
-    def process_CLEAN_START3(self):
-        req = self.getRequest()
+        if req in [self.BUTTONS.CLEAN_PRESSURE_ON]:
+            self.filler.request(task=self.filler.TASKS.PRESSURIZE)
 
-        if req in [self.BUTTONS.EXIT]:
-            self.to_CLEAN_TERMINATE()
+        if req in [self.BUTTONS.CLEAN_PRESSURE_OFF]:
+            self.filler.request(task=self.filler.TASKS.VENT)
 
-    def process_CLEAN_PRESSURIZE(self):
-        req = self.getRequest()
+        if req in [self.BUTTONS.CLEAN_DISPENSE]:
+            self.filler.request(task=self.filler.TASKS.DISPENSE, param=cleanDispenseTime)
 
-        if req in [self.BUTTONS.EXIT]:
-            self.to_CLEAN_TERMINATE()
 
-    def process_CLEAN_READY(self):
-        req = self.getRequest()
-
-        if req in [self.BUTTONS.EXIT]:
-            self.to_CLEAN_TERMINATE()
-
-    def process_CLEAN_CLEANING(self):
-        req = self.getRequest()
-
-        if req in [self.BUTTONS.EXIT]:
-            self.to_CLEAN_TERMINATE()
-
-    def process_CLEAN_CLEANING_WAIT(self):
-        req = self.getRequest()
-
-        if req in [self.BUTTONS.EXIT]:
-            self.to_CLEAN_TERMINATE()
-
-    def process_CLEAN_END(self):
-        req = self.getRequest()
-
-        if req in [self.BUTTONS.EXIT]:
-            self.to_CLEAN_TERMINATE()
-
-    def process_CLEAN_TERMINATE(self):
-        log.info('Terminating cleaning sequence.')
-        self.to_STANDBY()
-
-    # -------------------------------------------------------------------------
-    def process_FAULT(self):
+    def process_TERMINATE(self):
+        """Nothing to do here (yet)"""
         pass
-
-    def process_TERMINATED(self):
-        pass
-
-
-
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -766,6 +716,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Clean system panel
         b_clean_back              = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
+        b_clean_pressure_on       = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        b_clean_pressure_off      = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        b_clean_dispense          = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
 
         # Diagnostics panel
         l_diag_foot_switch        = QtWidgets.QLabel               # type: QtWidgets.QLabel
@@ -954,7 +907,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # Fill panel
             self.w.b_fill_back, self.w.b_fill_next, self.w.b_fill_abort,
             # Clean panel
-            self.w.b_clean_back,
+            self.w.b_clean_back, self.w.b_clean_pressure_on, self.w.b_clean_pressure_off, self.w.b_clean_dispense,
             # Diagnostics panel
             self.w.b_main_diagnostics, self.w.b_diag_back, self.w.b_diag_sound_test,
             self.w.b_diag_pressure_on, self.w.b_diag_pressure_off, self.w.b_diag_dispense, self.w.b_diag_setup,
@@ -1124,10 +1077,9 @@ class MainWindow(QtWidgets.QMainWindow):
         """Update the screen to match the state machine"""
         states = self.seq.STATES
         fillStates = [state for state in range(states.FILL_PREP1, states.FILL_TERMINATE)]
-        cleanStates = [state for state in range(states.CLEAN_START1, states.CLEAN_TERMINATE)]
 
         # Set the right panel
-        if self.seq.state in [states.STANDBY, states.FAULT, states.TERMINATED]:
+        if self.seq.state in [states.STANDBY]:
             self.selectPanel(PAGES.MAIN)
 
         elif self.seq.state in [states.DIAGNOSTICS]:
@@ -1142,7 +1094,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.w.b_fill_next.setText(message)
             self.w.b_fill_next.setEnabled(enable)
 
-        elif self.seq.state in cleanStates:
+        elif self.seq.state in [states.CLEAN]:
             self.selectPanel(PAGES.CLEAN)
 
 
@@ -1175,6 +1127,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
         elif origin == self.w.b_clean_back:
             self.seq.request(buttons.EXIT)
+
+        elif origin == self.w.b_clean_pressure_on:
+            self.seq.request(buttons.CLEAN_PRESSURE_ON)
+
+        elif origin == self.w.b_clean_pressure_off:
+            self.seq.request(buttons.CLEAN_PRESSURE_OFF)
+
+        elif origin == self.w.b_clean_dispense:
+            self.seq.request(buttons.CLEAN_DISPENSE)
 
         # Diagnostics related buttons
         elif origin == self.w.b_main_diagnostics:

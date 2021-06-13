@@ -51,7 +51,7 @@
        <enum>QFrame::NoFrame</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="page_main">
        <layout class="QGridLayout" name="gridLayout">
@@ -864,35 +864,144 @@ border: 1px solid black;</string>
        </layout>
       </widget>
       <widget class="QWidget" name="page_clean">
-       <widget class="QToolButton" name="b_clean_back">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>880</y>
-          <width>83</width>
-          <height>83</height>
-         </rect>
-        </property>
-        <property name="styleSheet">
-         <string notr="true">QToolButton {  
+       <layout class="QGridLayout" name="gridLayout_21">
+        <item row="4" column="0" colspan="2">
+         <widget class="QLabel" name="label_25">
+          <property name="font">
+           <font>
+            <family>Montserrat Medium</family>
+            <pointsize>25</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Open dispense valve</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QPushButton" name="b_clean_pressure_on">
+          <property name="font">
+           <font>
+            <family>Montserrat Medium</family>
+            <pointsize>45</pointsize>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 255)</string>
+          </property>
+          <property name="text">
+           <string>ON</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0" colspan="2">
+         <widget class="QLabel" name="label_26">
+          <property name="font">
+           <font>
+            <family>Montserrat Medium</family>
+            <pointsize>25</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Pressurization control</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <widget class="QToolButton" name="b_clean_back">
+          <property name="styleSheet">
+           <string notr="true">QToolButton {  
     border: 0px;
 }
 </string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>back.png</normaloff>back.png</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>80</width>
-          <height>80</height>
-         </size>
-        </property>
-       </widget>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>back.png</normaloff>back.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>80</width>
+            <height>80</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0" colspan="2">
+         <widget class="Line" name="line_5">
+          <property name="lineWidth">
+           <number>2</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QPushButton" name="b_clean_pressure_off">
+          <property name="font">
+           <font>
+            <family>Montserrat Medium</family>
+            <pointsize>45</pointsize>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 255)</string>
+          </property>
+          <property name="text">
+           <string>OFF</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0" colspan="2">
+         <widget class="QPushButton" name="b_clean_dispense">
+          <property name="font">
+           <font>
+            <family>Montserrat Medium</family>
+            <pointsize>45</pointsize>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 255)</string>
+          </property>
+          <property name="text">
+           <string>DISPENSE</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="0" colspan="2">
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>579</width>
+            <height>493</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="6" column="0" colspan="2">
+         <widget class="Line" name="line_6">
+          <property name="lineWidth">
+           <number>2</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="page_setup">
        <layout class="QGridLayout" name="gridLayout_20">
