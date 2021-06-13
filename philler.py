@@ -581,6 +581,12 @@ class FillingSequencer(Sequencer):
                 # How long will it take to fill it?
                 self.finalDispenseTime = math.trunc((weightRemaining - fillOffset) / slope)
 
+                # Clip the dispense time to prevent overfills
+
+                #TODO- put this value in a config
+                if self.finalDispenseTime > 1500:
+                    self.finalDispenseTime = 1500
+
                 log.debug(f'pre fill weightWithBottle: {self.weightWithBottle:0.2f}')
                 log.debug(f'total initial fill weight: {self.filler.weight:0.2f}g')
                 log.debug(f'difference weightInitialFill: {weightInitialFill:0.2f}g')
