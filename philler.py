@@ -533,7 +533,7 @@ class FillingSequencer(Sequencer):
         self.filler.request(task=self.filler.TASKS.DISPENSE, param=initFillTime)
 
         # Start a timer to wait at least as long as the fill will take
-        self.timer.start(milliseconds=(initFillTime+1500))
+        self.timer.start(milliseconds=(initFillTime+500))
 
         # Clear the stable flag (in case we are simulating here)
         self.filler.clearStable()
@@ -592,7 +592,7 @@ class FillingSequencer(Sequencer):
                 self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.finalDispenseTime)
 
                 # Start a timer to wait at least as long as the fill will take
-                self.timer.start(milliseconds=(self.finalDispenseTime+1500))
+                self.timer.start(milliseconds=(self.finalDispenseTime+500))
 
                 # Advance to state to wait for fill completion
                 self.to_FILL_FILLING_WAIT()
