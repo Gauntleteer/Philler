@@ -630,7 +630,7 @@ class FillingSequencer(Sequencer):
                 self.filler.clearStable()
 
                 # Did we get the desired amount of product?
-                minFillWeight = self.config.getValue(CFG.FILL_WEIGHT)  # nominally 27.3
+                minFillWeight = self.config.getValue(CFG.FILL_WEIGHT_MIN)  # nominally 27.3
                 actualWeight = self.filler.weight - self.weightWithBottle
 
                 log.debug(f'Final weight: {self.filler.weight:0.2f}g')
