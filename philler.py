@@ -195,6 +195,9 @@ class FillingSequencer(Sequencer):
         # Count how many bottles filled
         self.filledCount = 0
 
+        # Feedback on how much we were over
+        self.overagePct = 0.0
+
     @property
     def message(self):
         """Return the message associated with the current state"""
@@ -442,7 +445,8 @@ class FillingSequencer(Sequencer):
     # -------------------------------------------------------------------------
     def process_FILL_CLEAR_BOTTLE(self):
         """Make sure we return to (nearly) tared 0 weight"""
-        self.setMessage(f'Remove bottle.\n\n{self.filledCount} bottle(s) filled.', False)
+        #TODO - suppress this on the first fill
+        self.setMessage(f'Remove bottle.\n\n{self.filledCount} bottle(s) filled.\n\nLast fill was {self.overagePct:0.1f}% over', False)
 
         tolerance = self.config.getValue(CFG.TARE_TOLERANCE)
         tared = (tolerance >= self.filler.weight >= -tolerance)
@@ -529,7 +533,7 @@ class FillingSequencer(Sequencer):
         self.filler.request(task=self.filler.TASKS.DISPENSE, param=initFillTime)
 
         # Start a timer to wait at least as long as the fill will take
-        self.timer.start(milliseconds=(initFillTime+30000))
+        self.timer.start(milliseconds=(initFillTime+3000))
 
         # Clear the stable flag (in case we are simulating here)
         self.filler.clearStable()
@@ -588,7 +592,7 @@ class FillingSequencer(Sequencer):
                 self.filler.request(task=self.filler.TASKS.DISPENSE, param=self.finalDispenseTime)
 
                 # Start a timer to wait at least as long as the fill will take
-                self.timer.start(milliseconds=(self.finalDispenseTime+30000))
+                self.timer.start(milliseconds=(self.finalDispenseTime+3000))
 
                 # Advance to state to wait for fill completion
                 self.to_FILL_FILLING_WAIT()
@@ -626,14 +630,17 @@ class FillingSequencer(Sequencer):
                 self.filler.clearStable()
 
                 # Did we get the desired amount of product?
-                desiredFillWeight = self.config.getValue(CFG.FILL_WEIGHT)  # nominally 28.12
+                minFillWeight = self.config.getValue(CFG.FILL_WEIGHT)  # nominally 27.3
                 actualWeight = self.filler.weight - self.weightWithBottle
 
                 log.debug(f'Final weight: {self.filler.weight:0.2f}g')
                 log.debug(f'Delivered: {actualWeight:0.2f}g')
-                log.debug(f'Desired: {desiredFillWeight:0.2f}g')
+                log.debug(f'Minimum: {minFillWeight:0.2f}g')
 
-                if actualWeight >= desiredFillWeight:
+                # Retain how much this was over the minimum weight
+                self.overagePct = ((self.filler.weight - minFillWeight) / minFillWeight) * 100
+
+                if actualWeight >= minFillWeight:
                     # Got what we wanted, fill another
                     self.filledCount += 1
                     self.to_FILL_CLEAR_BOTTLE()
