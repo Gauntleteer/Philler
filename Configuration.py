@@ -14,6 +14,7 @@ class CFG(IntEnum):
     #SPECIFIC_GRAVITY        = auto()
     #FILL_VOLUME             = auto()
     FILL_WEIGHT             = auto()
+    FILL_WEIGHT_MIN         = auto()
     FILL_PRESSURE           = auto()
     FILL_INIT_DISPENSE_TIME = auto()
     FILL_INIT_DISPENSE_MIN  = auto()
