@@ -446,7 +446,7 @@ class FillingSequencer(Sequencer):
     def process_FILL_CLEAR_BOTTLE(self):
         """Make sure we return to (nearly) tared 0 weight"""
         #TODO - suppress this on the first fill
-        self.setMessage(f'Remove bottle.\n\n{self.filledCount} bottle(s) filled.\n\nLast fill was {self.overagePct:0.1f}% over', False)
+        self.setMessage(f'Remove bottle.\n\n{self.filledCount} bottle(s) filled.\n\nLast fill was\n{self.overagePct:0.1f}% over.', False)
 
         tolerance = self.config.getValue(CFG.TARE_TOLERANCE)
         tared = (tolerance >= self.filler.weight >= -tolerance)
