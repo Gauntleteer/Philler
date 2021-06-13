@@ -638,7 +638,7 @@ class FillingSequencer(Sequencer):
                 log.debug(f'Minimum: {minFillWeight:0.2f}g')
 
                 # Retain how much this was over the minimum weight
-                self.overagePct = ((self.filler.weight - minFillWeight) / minFillWeight) * 100
+                self.overagePct = ((actualWeight - minFillWeight) / minFillWeight) * 100
 
                 if actualWeight >= minFillWeight:
                     # Got what we wanted, fill another
