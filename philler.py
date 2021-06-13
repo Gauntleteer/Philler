@@ -329,6 +329,9 @@ class FillingSequencer(Sequencer):
         targetPressure = self.config.getValue(CFG.FILL_PRESSURE)
         self.setMessage(f'Pressurizing to\n{targetPressure} psi...', False)
 
+        # Start pressurizing
+        self.filler.request(task=self.filler.TASKS.PRESSURIZE)
+
         # Advance to the next state when the pressure is over 20
         if self.filler.pressure >= self.config.getValue(CFG.FILL_PRESSURE):
             self.to_FILL_PURGE_SETUP()

@@ -35,7 +35,7 @@ DEFAULT_ITEMS[DEFAULT_PRODUCT] = dict({
     #CFG.SPECIFIC_GRAVITY : ('Specific gravity', 'g/mL', 'product_specific_gravity', float, 0.91),
     #CFG.FILL_VOLUME : ('Fill volume', 'mL', 'fill_volume', float, 30.0),
     CFG.FILL_WEIGHT : ('Fill weight', 'g', 'fill_weight', float, 28.12),  # is it 27.3?
-    CFG.FILL_PRESSURE : ('Fill pressure (minimum)', 'psi', 'fill_pressure_minimum', float, 19.5),
+    CFG.FILL_PRESSURE : ('Fill pressure (minimum)', 'psi', 'fill_pressure_minimum', float, 20.0),
     CFG.FILL_INIT_DISPENSE_TIME : ('Fill initial dispense time', 'ms', 'fill_init_dispense_time', int, 1500),
     CFG.FILL_INIT_DISPENSE_MIN : ('Fill initial dispense minimum', 'g', 'fill_init_dispense_min', float, 4),
     #CFG.DISPENSE_RATE : ('Dispense rate (slope)', 'g/msec', 'dispense_rate', float, 0.01),
