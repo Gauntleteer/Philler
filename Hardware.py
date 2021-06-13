@@ -55,6 +55,7 @@ class Filler(QObject):
         self.requests = SimpleQueue()
         self._weight = 0.0
         self._weights = list()
+        self.maxweights = 30 # Use the last 30 values in the calculation
         self._stopswitch = False
         self._footswitch = False
         self._footswitchLatched = False
@@ -143,8 +144,8 @@ class Filler(QObject):
             self._weight = val
             self._weights.append(val)
 
-            # Trim the array to the last 10 weights
-            while len(self._weights) > 10:
+            # Trim the array to the last 30 weights
+            while len(self._weights) > self.maxweights:
                 self._weights = self._weights[1:]
 
     @property
