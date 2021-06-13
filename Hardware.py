@@ -15,8 +15,6 @@ log = logging.getLogger('')
 class Filler(QObject):
 
     finished = pyqtSignal()
-    heartbeat = pyqtSignal(int)
-    changed = pyqtSignal()
 
     # -------------------------------------------------------------------------
     def __init__(self, simulate=False, *args, **kwargs):
@@ -286,13 +284,7 @@ class Filler(QObject):
                 return
 
         # Read a line from the Arduino
-        #s = self.ser.read_until('\r\n')
-
         s = self.ser.readline()
-        #lines = self.ser.readlines(10)
-        #print(lines)
-        #s = lines[-1]
-        #log.debug(f's: {s}')
 
         if len(s) > 0:
             self.lastmessage = time.time()
@@ -329,8 +321,6 @@ class Filler(QObject):
                 # Latch the foot switch (crude debounce)
                 if self.footswitchLatched == False:
                     self.footswitchLatched = self.footswitch
-
-                #self.changed.emit()
 
             else:
                 log.critical(f'Unable to parse string: {s}')
@@ -383,15 +373,6 @@ class Filler(QObject):
 
         prev = 0
         while not self._stop.wait(self.tickrate):
-
-            now = time.time()
-            elapsed = now - prev
-            prev = now
-            #log.info(f'Elapsed: {elapsed}')
-
-            hb += 1
-            #self.heartbeat.emit(hb)
-
             try:
                 # Run the hardware interface
                 self.read()

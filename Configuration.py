@@ -47,7 +47,7 @@ DEFAULT_ITEMS[DEFAULT_PRODUCT] = dict({
     CFG.PURGE_MAX_COUNT : ('Maximum purges per bottle', 'ct', 'max_purge', int, 5),
     CFG.TARE_TOLERANCE : ('Tare tolerance', 'g', 'tare_tolerance', float, 0.3),
     CFG.BOTTLE_MIN_WEIGHT : ('Minimum bottle weight', 'g', 'min_bottle_weight', float, 40),
-    CFG.CLEAN_DISPENSE : ('Cleaning dispense time', 'ms', 'clean_dispense_time', int, 30000),
+    CFG.CLEAN_DISPENSE : ('Cleaning dispense time', 'ms', 'clean_dispense_time', int, 20000),
 })
 
 

@@ -51,7 +51,7 @@
        <enum>QFrame::NoFrame</enum>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="page_main">
        <layout class="QGridLayout" name="gridLayout">
@@ -138,30 +138,6 @@ SYSTEM</string>
            </widget>
           </item>
           <item>
-           <widget class="QToolButton" name="b_main_diagnostics">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="font">
-             <font>
-              <family>Montserrat Black</family>
-              <pointsize>48</pointsize>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">color: rgb(85, 0, 127);</string>
-            </property>
-            <property name="text">
-             <string>DIAGNOSTICS</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QToolButton" name="b_main_shutdown">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -199,6 +175,12 @@ DOWN</string>
           </property>
           <item row="13" column="0">
            <widget class="QToolButton" name="b_diag_back">
+            <property name="font">
+             <font>
+              <family>Montserrat SemiBold</family>
+              <pointsize>45</pointsize>
+             </font>
+            </property>
             <property name="styleSheet">
              <string notr="true">QToolButton {  
     border: 0px;
@@ -206,7 +188,7 @@ DOWN</string>
 </string>
             </property>
             <property name="text">
-             <string/>
+             <string>BACK</string>
             </property>
             <property name="icon">
              <iconset>
@@ -217,6 +199,9 @@ DOWN</string>
               <width>80</width>
               <height>80</height>
              </size>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextBesideIcon</enum>
             </property>
            </widget>
           </item>
@@ -591,6 +576,46 @@ control</string>
           <property name="verticalSpacing">
            <number>2</number>
           </property>
+          <item row="1" column="0">
+           <widget class="QFrame" name="f_fill">
+            <property name="frameShape">
+             <enum>QFrame::Box</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <property name="lineWidth">
+             <number>2</number>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_7">
+             <item row="0" column="0">
+              <widget class="QToolButton" name="b_fill_next">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="font">
+                <font>
+                 <family>Montserrat Medium</family>
+                 <pointsize>35</pointsize>
+                </font>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">color: rgb(0, 0, 255); 
+border: none;</string>
+               </property>
+               <property name="text">
+                <string>Verify clean drip
+ tray installed,
+with no bottle.</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QFrame" name="f_pressure">
             <property name="frameShape">
@@ -652,174 +677,18 @@ border-bottom-left-radius: 7px;
             </layout>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QFrame" name="f_fill">
-            <property name="frameShape">
-             <enum>QFrame::Box</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
-            </property>
-            <property name="lineWidth">
-             <number>2</number>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_7">
-             <item row="0" column="0">
-              <widget class="QToolButton" name="b_fill_next">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="font">
-                <font>
-                 <family>Montserrat Medium</family>
-                 <pointsize>35</pointsize>
-                </font>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">color: rgb(0, 0, 255); 
-border: none;</string>
-               </property>
-               <property name="text">
-                <string>Verify clean drip
- tray installed,
-with no bottle.</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QFrame" name="f_weight">
-            <property name="frameShape">
-             <enum>QFrame::Box</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
-            </property>
-            <property name="lineWidth">
-             <number>2</number>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout">
-             <property name="spacing">
-              <number>0</number>
-             </property>
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item>
-              <layout class="QGridLayout" name="gl_weight">
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="horizontalSpacing">
-                <number>0</number>
-               </property>
-               <property name="verticalSpacing">
-                <number>6</number>
-               </property>
-               <item row="0" column="0">
-                <widget class="QLabel" name="l_weight_neg">
-                 <property name="minimumSize">
-                  <size>
-                   <width>50</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>50</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <family>DSEG7 Modern</family>
-                   <pointsize>48</pointsize>
-                   <weight>50</weight>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">background-color: rgb(193, 215, 238);</string>
-                 </property>
-                 <property name="text">
-                  <string>-</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="2">
-                <widget class="QLabel" name="l_weight_g">
-                 <property name="maximumSize">
-                  <size>
-                   <width>20</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <pointsize>24</pointsize>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">background-color: rgb(193, 215, 238);</string>
-                 </property>
-                 <property name="text">
-                  <string>g</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="l_weight">
-                 <property name="font">
-                  <font>
-                   <family>DSEG7 Modern</family>
-                   <pointsize>48</pointsize>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">background-color: rgb(193, 215, 238);</string>
-                 </property>
-                 <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
-                 </property>
-                 <property name="text">
-                  <string>1234.56</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </widget>
-          </item>
          </layout>
         </item>
         <item row="1" column="0">
          <layout class="QGridLayout" name="gridLayout_5">
           <item row="0" column="0">
            <widget class="QToolButton" name="b_fill_back">
+            <property name="font">
+             <font>
+              <family>Montserrat SemiBold</family>
+              <pointsize>45</pointsize>
+             </font>
+            </property>
             <property name="styleSheet">
              <string notr="true">QToolButton {  
     border: 0px;
@@ -827,7 +696,7 @@ with no bottle.</string>
 </string>
             </property>
             <property name="text">
-             <string/>
+             <string>BACK</string>
             </property>
             <property name="icon">
              <iconset>
@@ -839,25 +708,23 @@ with no bottle.</string>
               <height>80</height>
              </size>
             </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextBesideIcon</enum>
+            </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QPushButton" name="b_fill_abort">
-            <property name="font">
-             <font>
-              <family>Montserrat SemiBold</family>
-              <pointsize>45</pointsize>
-             </font>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
-            <property name="styleSheet">
-             <string notr="true">color: rgb(0, 0, 0);
-background-color: rgb(255, 0, 0);
-border: 1px solid black;</string>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
             </property>
-            <property name="text">
-             <string>ABORT</string>
-            </property>
-           </widget>
+           </spacer>
           </item>
          </layout>
         </item>
@@ -865,6 +732,9 @@ border: 1px solid black;</string>
       </widget>
       <widget class="QWidget" name="page_clean">
        <layout class="QGridLayout" name="gridLayout_21">
+        <property name="verticalSpacing">
+         <number>40</number>
+        </property>
         <item row="4" column="0" colspan="2">
          <widget class="QLabel" name="label_25">
           <property name="font">
@@ -910,29 +780,6 @@ border: 1px solid black;</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="0">
-         <widget class="QToolButton" name="b_clean_back">
-          <property name="styleSheet">
-           <string notr="true">QToolButton {  
-    border: 0px;
-}
-</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="icon">
-           <iconset>
-            <normaloff>back.png</normaloff>back.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>80</width>
-            <height>80</height>
-           </size>
           </property>
          </widget>
         </item>
@@ -986,7 +833,7 @@ border: 1px solid black;</string>
           <property name="sizeHint" stdset="0">
            <size>
             <width>579</width>
-            <height>493</height>
+            <height>221</height>
            </size>
           </property>
          </spacer>
@@ -998,6 +845,44 @@ border: 1px solid black;</string>
           </property>
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0" colspan="2">
+         <widget class="QToolButton" name="b_clean_back">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <family>Montserrat SemiBold</family>
+            <pointsize>45</pointsize>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QToolButton {  
+    border: 0px;
+}
+</string>
+          </property>
+          <property name="text">
+           <string>BACK</string>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>back.png</normaloff>back.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>80</width>
+            <height>80</height>
+           </size>
+          </property>
+          <property name="toolButtonStyle">
+           <enum>Qt::ToolButtonTextBesideIcon</enum>
           </property>
          </widget>
         </item>
@@ -1047,6 +932,12 @@ border: 1px solid black;</string>
         </item>
         <item row="1" column="0">
          <widget class="QToolButton" name="b_setup_back">
+          <property name="font">
+           <font>
+            <family>Montserrat SemiBold</family>
+            <pointsize>45</pointsize>
+           </font>
+          </property>
           <property name="styleSheet">
            <string notr="true">QToolButton {  
     border: 0px;
@@ -1054,7 +945,7 @@ border: 1px solid black;</string>
 </string>
           </property>
           <property name="text">
-           <string/>
+           <string>BACK</string>
           </property>
           <property name="icon">
            <iconset>
@@ -1065,6 +956,9 @@ border: 1px solid black;</string>
             <width>80</width>
             <height>80</height>
            </size>
+          </property>
+          <property name="toolButtonStyle">
+           <enum>Qt::ToolButtonTextBesideIcon</enum>
           </property>
          </widget>
         </item>
@@ -1088,6 +982,7 @@ border: 1px solid black;</string>
      <string>File</string>
     </property>
     <addaction name="actionQuit"/>
+    <addaction name="actionDiagnostics"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -1095,6 +990,11 @@ border: 1px solid black;</string>
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionDiagnostics">
+   <property name="text">
+    <string>Diagnostics</string>
    </property>
   </action>
  </widget>
