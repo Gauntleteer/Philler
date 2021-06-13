@@ -350,9 +350,11 @@ class FillingSequencer(Sequencer):
         self.purgeCount = 0
         self.to_FILL_PURGE_SETUP()
 
+    #TODO: Put a state in here to clear the footswitch in case it was held down too long
+
     def process_FILL_PURGE_SETUP(self):
         """Wait for footswitch or screen tap to purge the nozzle"""
-        self.setMessage('Ready for purging.\n\nPlace a bottle under\nneedle.\n\nPress foot switch to\npurge tubing, until\nall air is removed.\n\nRemove bottle.\n\n(Tap to continue)', True)
+        self.setMessage('Ready for priming.\n\nPlace a bottle under\nneedle.\n\nPress foot switch to\nprime tubing, until\nall air is removed.\n\nRemove bottle.\n\n(Tap to continue)', True)
 
         # Wait for a footswitch
         if self.filler.footswitchLatched:
@@ -388,9 +390,13 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_PURGE_WAIT(self):
         """Wait for the purge pulse to complete"""
-        self.setMessage(f'Purging...\n\n({self.purgeCount})', False)
+        self.setMessage(f'Priming...\n\n({self.purgeCount})', False)
 
         if self.timer.expired:
+
+            # Acknowledge the foot switch was hit (might still be down)
+            self.filler.footswitchLatched = False
+
             self.to_FILL_PURGE_SETUP()
 
         # Handle the abort/exit buttons or stop switch
@@ -400,7 +406,7 @@ class FillingSequencer(Sequencer):
 
     def process_FILL_PURGE_CLEAR_WAIT(self):
         """Make sure we return to (nearly) tared 0 weight"""
-        self.setMessage('Remove object from\npurging area.', False)
+        self.setMessage('Remove object from\npriming area.', False)
 
         tolerance = self.config.getValue(CFG.TARE_TOLERANCE)
         tared = (tolerance >= self.filler.weight >= -tolerance)
@@ -417,7 +423,7 @@ class FillingSequencer(Sequencer):
     def process_FILL_PURGE_RESET_WAIT(self):
         """Waiting for user to remove the bottle before resetting purge sequence"""
         # Wait for the weight to return to the tare weight again
-        self.setMessage('Max purges into\nthis bottle exceeded.\n\nRemove bottle from\npurging area\nand empty it.', False)
+        self.setMessage('Max primes into\nthis bottle exceeded.\n\nRemove bottle from\npriming area\nand empty it.', False)
 
         tolerance = self.config.getValue(CFG.TARE_TOLERANCE)
         tared = (tolerance >= self.filler.weight >= -tolerance)
