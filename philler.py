@@ -1164,6 +1164,9 @@ class MainWindow(QtWidgets.QMainWindow):
         elif origin == self.w.b_diag_setup:
             self.seq.request(buttons.DIAG_SETUP)
 
+        elif origin == self.w.b_diag_sound_test:
+            self.play()
+
         # Setup related buttons
         elif origin == self.w.b_setup_back:
             self.seq.request(buttons.EXIT)
