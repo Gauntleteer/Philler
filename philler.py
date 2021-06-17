@@ -14,6 +14,7 @@ import math
 import sys
 import functools
 import os
+import datetime
 import random
 import argparse
 from enum import Enum, auto, IntEnum
@@ -646,6 +647,14 @@ class FillingSequencer(Sequencer):
 
                 # Retain how much this was over the minimum weight
                 self.overagePct = ((actualWeight - minFillWeight) / minFillWeight) * 100
+
+                # Write the overage to a file for later inspection
+                # TODO - Remove this after testing is done
+                with open('fillog.txt', 'a') as fillog:
+
+                    now = datetime.datetime.now().isoformat()
+                    out = f'{now},{self.filler.weight:0.2f}\n'
+                    fillog.write(out)
 
                 if actualWeight >= minFillWeight:
                     # Got what we wanted, fill another
