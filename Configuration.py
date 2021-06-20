@@ -18,6 +18,7 @@ class CFG(IntEnum):
     FILL_PRESSURE           = auto()
     FILL_INIT_DISPENSE_TIME = auto()
     FILL_INIT_DISPENSE_MIN  = auto()
+    FILL_FINAL_DISPENSE_MAX = auto()
     #DISPENSE_RATE           = auto()
     DISPENSE_OFFSET         = auto()
     DISPLAY_PRESSURE        = auto()
@@ -40,6 +41,7 @@ DEFAULT_ITEMS[DEFAULT_PRODUCT] = dict({
     CFG.FILL_PRESSURE : ('Fill pressure (minimum)', 'psi', 'fill_pressure_minimum', float, 18.5),
     CFG.FILL_INIT_DISPENSE_TIME : ('Fill initial dispense time', 'ms', 'fill_init_dispense_time', int, 1500),
     CFG.FILL_INIT_DISPENSE_MIN : ('Fill initial dispense minimum', 'g', 'fill_init_dispense_min', float, 4),
+    CFG.FILL_FINAL_DISPENSE_MAX : ('Fill final dispense time (max)', 'ms', 'fill_final_dispense_max', float, 1500),
     #CFG.DISPENSE_RATE : ('Dispense rate (slope)', 'g/msec', 'dispense_rate', float, 0.01),
     CFG.DISPENSE_OFFSET : ('Dispense offset (intercept)', 'g', 'dispense_offset', float, 1.5),
     CFG.DISPLAY_PRESSURE : ('Display pressure (maximum)', 'psi', 'pressure_display_max', float, 20.0),
@@ -47,7 +49,7 @@ DEFAULT_ITEMS[DEFAULT_PRODUCT] = dict({
     CFG.PURGE_MAX_COUNT : ('Maximum purges per bottle', 'ct', 'max_purge', int, 5),
     CFG.TARE_TOLERANCE : ('Tare tolerance', 'g', 'tare_tolerance', float, 0.3),
     CFG.BOTTLE_MIN_WEIGHT : ('Minimum bottle weight', 'g', 'min_bottle_weight', float, 40),
-    CFG.CLEAN_DISPENSE : ('Cleaning dispense time', 'ms', 'clean_dispense_time', int, 20000),
+    CFG.CLEAN_DISPENSE : ('Cleaning dispense time', 'ms', 'clean_dispense_time', int, 2000),
 })
 
 

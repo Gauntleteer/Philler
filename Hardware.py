@@ -7,6 +7,7 @@ from threading import Lock, Event
 from queue import SimpleQueue
 import re
 from enum import auto, IntEnum
+from CountdownTimer import CountdownTimer
 
 from PyQt5.QtCore import Qt, QSize, QTimer, QObject, QThread, pyqtSignal
 
@@ -25,7 +26,7 @@ class Filler(QObject):
         self.simulate = simulate
         self.simulatedPressure = 0.0
         self.simulatedWeight = 0.0
-        self.simulatedFootswitchLatched = False
+        self.simulatedFillswitchLatched = False
         self.simulatedStopswitch = False
         self.simulatedStable = False
 
@@ -55,9 +56,14 @@ class Filler(QObject):
         self._weights = list()
         self.maxweights = 30 # Use the last 30 values in the calculation
         self._stopswitch = False
-        self._footswitch = False
-        self._footswitchLatched = False
+        self._fillswitch = False
+        self._fillswitchLatched = False
         self.pressureRaw = 0
+        self._pressureswitch = False
+
+        # A timer to estimate when a dispense is done
+        self.dispenseTimer = CountdownTimer()
+        self.dispenseTimer.expire()
 
         # Task properties
         self.tickrate = 0.005
@@ -168,25 +174,25 @@ class Filler(QObject):
             return True
 
     @property
-    def footswitch(self):
+    def fillswitch(self):
         with self.lock:
-            return self._footswitch
-    @footswitch.setter
-    def footswitch(self, val):
-        with self.lock: self._footswitch = val
+            return self._fillswitch
+    @fillswitch.setter
+    def fillswitch(self, val):
+        with self.lock: self._fillswitch = val
 
     @property
-    def footswitchLatched(self):
+    def fillswitchLatched(self):
         if self.simulate:
-            return self.simulatedFootswitchLatched
+            return self.simulatedFillswitchLatched
         with self.lock:
-            return self._footswitchLatched
+            return self._fillswitchLatched
 
-    @footswitchLatched.setter
-    def footswitchLatched(self, val):
+    @fillswitchLatched.setter
+    def fillswitchLatched(self, val):
         with self.lock:
-            self._footswitchLatched = val
-            self.simulatedFootswitchLatched = val
+            self._fillswitchLatched = val
+            self.simulatedFillswitchLatched = val
 
     @property
     def stopswitch(self):
@@ -215,6 +221,15 @@ class Filler(QObject):
 
             return self.countsToPSI(p)
 
+    @property
+    def pressureSwitch(self):
+        return self._pressureswitch
+
+    @property
+    def dispenseSwitch(self):
+        """Infer that the dispense switch is pressed, if the timer is running"""
+        return (not self.dispenseTimer.expired)
+
     # -------------------------------------------------------------------------
     def simulatePressure(self, val):
         self.simulate = True
@@ -232,9 +247,9 @@ class Filler(QObject):
     def clearStable(self):
         self.simulatedStable = False
 
-    def simulateFootswitch(self, val):
+    def simulateFillswitch(self, val):
         self.simulate = True
-        self.simulatedFootswitchLatched = val
+        self.simulatedFillswitchLatched = val
 
     def simulateStopSwitch(self, val=False, toggle=False):
         self.simulate = True
@@ -296,7 +311,7 @@ class Filler(QObject):
                 weightStr = match.groups()[1]
                 pressureStr = match.groups()[2]
                 stopswitchStr = match.groups()[3]
-                footswitchStr = match.groups()[4]
+                fillswitchStr = match.groups()[4]
 
                 # Decode the weight
                 try:
@@ -315,12 +330,12 @@ class Filler(QObject):
                 # Decode the stop switch value
                 self.stopswitch = (stopswitchStr == 'S')
 
-                # Decode the foot switch value
-                self.footswitch = (footswitchStr == 'F')
+                # Decode the fill switch value
+                self.fillswitch = (fillswitchStr == 'F')
 
-                # Latch the foot switch (crude debounce)
-                if self.footswitchLatched == False:
-                    self.footswitchLatched = self.footswitch
+                # Latch the fill switch (crude debounce)
+                if self.fillswitchLatched == False:
+                    self.fillswitchLatched = self.fillswitch
 
             else:
                 log.critical(f'Unable to parse string: {s}')
@@ -337,16 +352,19 @@ class Filler(QObject):
                 # Send the valve state to pressurize the bulk
                 log.critical('SENDING PRESSURIZE')
                 self.ser.write(f'P_'.encode('UTF-8'))
+                self._pressureswitch = True
 
             elif task == self.TASKS.VENT:
                 # Send the valve state to de-pressurize the bulk
                 log.critical('SENDING DE-PRESSURIZE')
                 self.ser.write(f'p_'.encode('UTF-8'))
+                self._pressureswitch = False
 
             elif task == self.TASKS.DISPENSE:
                 # Send a dispense down to the filler hardware
                 log.critical(f'SENDING DISPENSE FOR {param}ms')
                 self.ser.write(f'{param}_'.encode('UTF-8'))
+                self.dispenseTimer.start(milliseconds=param)
 
             elif task == self.TASKS.ABORT:
                 # Zero out the dispense time to force it to stop

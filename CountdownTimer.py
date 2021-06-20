@@ -38,3 +38,9 @@ class CountdownTimer:
         :return: Nothing.
         """
         self.tend = self.now
+
+    @property
+    def remaining(self):
+        """Determine how much time is remaining on the timer, in milliseconds"""
+        return (self.tend - self.now).total_seconds() * 1000
+

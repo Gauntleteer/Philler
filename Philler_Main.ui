@@ -51,7 +51,7 @@
        <enum>QFrame::NoFrame</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page_main">
        <layout class="QGridLayout" name="gridLayout">
@@ -534,7 +534,7 @@ control</string>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QLabel" name="l_diag_foot_switch">
+           <widget class="QLabel" name="l_diag_fill_switch">
             <property name="font">
              <font>
               <family>Montserrat Medium</family>
@@ -735,55 +735,24 @@ border-bottom-left-radius: 7px;
         <property name="verticalSpacing">
          <number>40</number>
         </property>
-        <item row="4" column="0" colspan="2">
-         <widget class="QLabel" name="label_25">
-          <property name="font">
-           <font>
-            <family>Montserrat Medium</family>
-            <pointsize>25</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Open dispense valve</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0" colspan="2">
+        <item row="1" column="0" colspan="2">
          <widget class="QPushButton" name="b_clean_pressure_on">
           <property name="font">
            <font>
             <family>Montserrat Medium</family>
-            <pointsize>45</pointsize>
+            <pointsize>40</pointsize>
            </font>
           </property>
           <property name="styleSheet">
            <string notr="true">color: rgb(0, 0, 255)</string>
           </property>
           <property name="text">
-           <string>ON</string>
+           <string>AIR PRESSURE
+ON</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="0" colspan="2">
-         <widget class="QLabel" name="label_26">
-          <property name="font">
-           <font>
-            <family>Montserrat Medium</family>
-            <pointsize>25</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Pressurization control</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0" colspan="2">
+        <item row="2" column="0" colspan="2">
          <widget class="Line" name="line_5">
           <property name="lineWidth">
            <number>2</number>
@@ -793,39 +762,48 @@ border-bottom-left-radius: 7px;
           </property>
          </widget>
         </item>
-        <item row="1" column="0" colspan="2">
+        <item row="0" column="0" colspan="2">
          <widget class="QPushButton" name="b_clean_pressure_off">
           <property name="font">
            <font>
             <family>Montserrat Medium</family>
-            <pointsize>45</pointsize>
+            <pointsize>40</pointsize>
            </font>
           </property>
           <property name="styleSheet">
-           <string notr="true">color: rgb(0, 0, 255)</string>
+           <string notr="true">color: rgb(0, 0, 255);
+background-color: rgb(255, 255, 127);</string>
           </property>
           <property name="text">
-           <string>OFF</string>
+           <string>AIR PRESSURE
+OFF</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="0" colspan="2">
-         <widget class="QPushButton" name="b_clean_dispense">
+        <item row="4" column="0" colspan="2">
+         <widget class="QPushButton" name="b_clean_dispense_on">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="font">
            <font>
             <family>Montserrat Medium</family>
-            <pointsize>45</pointsize>
+            <pointsize>40</pointsize>
            </font>
           </property>
           <property name="styleSheet">
            <string notr="true">color: rgb(0, 0, 255)</string>
           </property>
           <property name="text">
-           <string>DISPENSE</string>
+           <string>DISPENSE VALVE
+ON</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="0" colspan="2">
+        <item row="6" column="0" colspan="2">
          <spacer name="verticalSpacer_2">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -838,7 +816,7 @@ border-bottom-left-radius: 7px;
           </property>
          </spacer>
         </item>
-        <item row="6" column="0" colspan="2">
+        <item row="5" column="0" colspan="2">
          <widget class="Line" name="line_6">
           <property name="lineWidth">
            <number>2</number>
@@ -848,7 +826,7 @@ border-bottom-left-radius: 7px;
           </property>
          </widget>
         </item>
-        <item row="8" column="0" colspan="2">
+        <item row="7" column="0" colspan="2">
          <widget class="QToolButton" name="b_clean_back">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -883,6 +861,30 @@ border-bottom-left-radius: 7px;
           </property>
           <property name="toolButtonStyle">
            <enum>Qt::ToolButtonTextBesideIcon</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="b_clean_dispense_off">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <family>Montserrat Medium</family>
+            <pointsize>40</pointsize>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 255);
+background-color: rgb(255, 255, 127);</string>
+          </property>
+          <property name="text">
+           <string>DISPENSE VALVE
+OFF</string>
           </property>
          </widget>
         </item>
@@ -981,8 +983,8 @@ border-bottom-left-radius: 7px;
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionQuit"/>
     <addaction name="actionDiagnostics"/>
+    <addaction name="actionQuit"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>

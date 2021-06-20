@@ -101,8 +101,8 @@ class FillingSequencer(Sequencer):
         FILL_RESET_STOP             = auto() # Wait for user to reset the STOP switch
         FILL_PRESSURIZE             = auto() # Pressurize the system
 
-        FILL_PURGE_INIT             = auto() # Clear foot switch latch
-        FILL_PURGE_SETUP            = auto() # Prompt user to purge w/foot switch
+        FILL_PURGE_INIT             = auto() # Clear fill switch latch
+        FILL_PURGE_SETUP            = auto() # Prompt user to purge w/fill switch
         FILL_PURGE_WAIT             = auto() # Sent purge pulse, waiting for completion
         FILL_PURGE_CLEAR_WAIT       = auto() # Ensure user removed purge capture bottle
         FILL_PURGE_RESET_WAIT       = auto() # Waiting for user to remove/dump purge capture bottle
@@ -111,8 +111,8 @@ class FillingSequencer(Sequencer):
         FILL_LOAD_BOTTLE            = auto() # Prompt user to load a bottle
         FILL_LOAD_BOTTLE_WAIT       = auto() # Prompt user to load a bottle
 
-        FILL_READY_SETUP            = auto() # Clear foot switch latch
-        FILL_READY_WAIT             = auto() # Wait for foot switch
+        FILL_READY_SETUP            = auto() # Clear fill switch latch
+        FILL_READY_WAIT             = auto() # Wait for fill switch
 
         FILL_INIT_FILLING           = auto()
         FILL_INIT_FILLING_WAIT      = auto()
@@ -143,7 +143,8 @@ class FillingSequencer(Sequencer):
         # Clean screen
         CLEAN_PRESSURE_ON           = auto()
         CLEAN_PRESSURE_OFF          = auto()
-        CLEAN_DISPENSE              = auto()
+        CLEAN_DISPENSE_ON           = auto()
+        CLEAN_DISPENSE_OFF          = auto()
 
         # Diagnostics screen
         DIAG_PRESSURE_ON            = auto()
@@ -175,6 +176,10 @@ class FillingSequencer(Sequencer):
         self.timer = CountdownTimer()
         self.timer.start(seconds=1)
         self.timer.expire()
+
+        # A timer for cleaning
+        self.cleaningTimer = CountdownTimer()
+        self.cleaningTimer.expire()
 
         # A queue for requests from the user
         self.requests = SimpleQueue()
@@ -284,9 +289,9 @@ class FillingSequencer(Sequencer):
         tared = (tolerance >= self.filler.weight >= -tolerance)
 
         if tared:
-            self.setMessage('Verify clean drip\n tray installed,\nwith no bottle.\n\n(Tap to continue)', True)
+            self.setMessage('Remove bottle,\nif present.\n\n(Tap to continue)', True)
         else:
-            self.setMessage(f'Verify clean drip\n tray installed,\nwith no bottle.\n\nTare scale (0.0 ±{tolerance}g).\n\n(Tap to continue)', False)
+            self.setMessage(f'Remove bottle,\nif present.\n\nTare scale (0.0 ±{tolerance}g).\n\n(Tap to continue)', False)
 
         # Skip to next screen if user presses the button
         req = self.getRequest()
@@ -330,7 +335,7 @@ class FillingSequencer(Sequencer):
     def process_FILL_PRESSURIZE(self):
         """Wait for pressure to build up"""
         targetPressure = self.config.getValue(CFG.FILL_PRESSURE)
-        self.setMessage(f'Pressurizing to\n{targetPressure} psi...', False)
+        self.setMessage('Pressurizing...', False)
 
         # Start pressurizing
         self.filler.request(task=self.filler.TASKS.PRESSURIZE)
@@ -348,23 +353,23 @@ class FillingSequencer(Sequencer):
     # PURGING
     # -------------------------------------------------------------------------
     def process_FILL_PURGE_INIT(self):
-        """Init the purge state by clearing any previous foot switches"""
-        self.filler.footswitchLatched = False
+        """Init the purge state by clearing any previous fill switches"""
+        self.filler.fillswitchLatched = False
         self.purgeCount = 0
         self.to_FILL_PURGE_SETUP()
 
-    #TODO: Put a state in here to clear the footswitch in case it was held down too long
+    #TODO: Put a state in here to clear the fill switch in case it was held down too long
     #TODO: Figure out why it was priming on us accidentally!!!
 
     def process_FILL_PURGE_SETUP(self):
-        """Wait for footswitch or screen tap to purge the nozzle"""
-        self.setMessage('Ready for priming.\n\nPlace a bottle under\nneedle.\n\nPress foot switch to\nprime tubing, until\nall air is removed.\n\nRemove bottle.\n\n(Tap to continue)', True)
+        """Wait for fill switch or screen tap to purge the nozzle"""
+        self.setMessage('Ready for priming.\n\nPlace a bottle under\nneedle.\n\nPress fill switch to\nprime tubing, until\nall air is removed.\n\nRemove bottle.\n\n(Tap to continue)', True)
 
-        # Wait for a footswitch
-        if self.filler.footswitchLatched:
+        # Wait for a fill switch
+        if self.filler.fillswitchLatched:
 
-            # Acknowledge the foot switch was hit
-            self.filler.footswitchLatched = False
+            # Acknowledge the fill switch was hit
+            self.filler.fillswitchLatched = False
 
             # Permit only 5 purges into a bottle without forcing the user to dump/reset it
             maxPurges = self.config.getValue(CFG.PURGE_MAX_COUNT)
@@ -398,8 +403,8 @@ class FillingSequencer(Sequencer):
 
         if self.timer.expired:
 
-            # Acknowledge the foot switch was hit (might still be down)
-            self.filler.footswitchLatched = False
+            # Acknowledge the fill switch was hit (might still be down)
+            self.filler.fillswitchLatched = False
 
             self.to_FILL_PURGE_SETUP()
 
@@ -446,7 +451,7 @@ class FillingSequencer(Sequencer):
     # -------------------------------------------------------------------------
     def process_FILL_CLEAR_BOTTLE(self):
         """Make sure we return to (nearly) tared 0 weight"""
-        self.setMessage(f'Remove bottle.\n\n{self.filledCount} bottle(s) filled.\n\nLast fill was\n{self.overagePct:0.1f}% over.', False)
+        self.setMessage(f'Remove bottle.\n\n{self.filledCount} bottle(s) filled.', False)
 
         tolerance = self.config.getValue(CFG.TARE_TOLERANCE)
         tared = (tolerance >= self.filler.weight >= -tolerance)
@@ -502,8 +507,8 @@ class FillingSequencer(Sequencer):
             self.to_FILL_TERMINATE()
 
     def process_FILL_READY_SETUP(self):
-        """Init the state by clearing any previous foot switches"""
-        self.filler.footswitchLatched = False
+        """Init the state by clearing any previous fill switches"""
+        self.filler.fillswitchLatched = False
         self.to_FILL_READY_WAIT()
 
         # Handle the abort/exit buttons or stop switch
@@ -512,16 +517,16 @@ class FillingSequencer(Sequencer):
             self.to_FILL_TERMINATE()
 
     def process_FILL_READY_WAIT(self):
-        """Waiting for user to hit the foot switch to do a fill"""
-        self.setMessage('Ready to fill bottle.\n\nPress foot\nswitch once to fill\nbottle.', False)
+        """Waiting for user to hit the fill switch to do a fill"""
+        self.setMessage('Ready to fill bottle.\n\nPress fill\nswitch once to fill\nbottle.', False)
 
         # TODO - detect the removal of a bottle
 
-        # Wait for a footswitch, or use the faked I/O
-        if self.filler.footswitchLatched:
+        # Wait for a fill switch, or use the faked I/O
+        if self.filler.fillswitchLatched:
 
-            # Acknowledge the foot switch was hit
-            self.filler.footswitchLatched = False
+            # Acknowledge the fill switch was hit
+            self.filler.fillswitchLatched = False
             self.to_FILL_INIT_FILLING()
 
         # Handle the abort/exit buttons or stop switch
@@ -562,6 +567,7 @@ class FillingSequencer(Sequencer):
                 initFillMin = self.config.getValue(CFG.FILL_INIT_DISPENSE_MIN) # maybe 4g?
                 fillOffset = self.config.getValue(CFG.DISPENSE_OFFSET) # 1.5g
                 totalFillWeight = self.config.getValue(CFG.FILL_WEIGHT) # 28.12g
+                maxFinalDispenseTime = self.config.getValue(CFG.FILL_FINAL_DISPENSE_MAX) # 1500ms
 
                 log.debug(f'initFillTime = {initFillTime}, fillOffset = {fillOffset}, totalFillWeight = {totalFillWeight}')
 
@@ -574,7 +580,6 @@ class FillingSequencer(Sequencer):
                     return
 
                 # Calculate filling rate
-                # TODO - put a range on this to prevent long main dispense times
                 slope = (weightInitialFill - fillOffset) / initFillTime
 
                 # How much do we have left to fill?
@@ -584,10 +589,9 @@ class FillingSequencer(Sequencer):
                 self.finalDispenseTime = math.trunc((weightRemaining - fillOffset) / slope)
 
                 # Clip the dispense time to prevent overfills
-
-                #TODO- put this value in a config
-                if self.finalDispenseTime > 1500:
-                    self.finalDispenseTime = 1500
+                if self.finalDispenseTime > maxFinalDispenseTime:
+                    self.finalDispenseTime = maxFinalDispenseTime
+                    log.critical(f'CLIPPING DISPENSE TIME TO MAXIMUM! ({maxFinalDispenseTime}ms)')
 
                 log.debug(f'pre fill weightWithBottle: {self.weightWithBottle:0.2f}')
                 log.debug(f'total initial fill weight: {self.filler.weight:0.2f}g')
@@ -650,11 +654,11 @@ class FillingSequencer(Sequencer):
 
                 # Write the overage to a file for later inspection
                 # TODO - Remove this after testing is done
-                with open('fillog.txt', 'a') as fillog:
+                with open('fillog.txt', 'a') as filllog:
 
                     now = datetime.datetime.now().isoformat()
                     out = f'{now},{self.filler.weight:0.2f}\n'
-                    fillog.write(out)
+                    filllog.write(out)
 
                 if actualWeight >= minFillWeight:
                     # Got what we wanted, fill another
@@ -711,15 +715,33 @@ class FillingSequencer(Sequencer):
 
             self.to_STANDBY()
 
+        elif req in [self.BUTTONS.MAIN_ENTER_DIAGNOSTICS]:
+            self.to_DIAGNOSTICS()
+
         if req in [self.BUTTONS.CLEAN_PRESSURE_ON]:
             self.filler.request(task=self.filler.TASKS.PRESSURIZE)
 
         if req in [self.BUTTONS.CLEAN_PRESSURE_OFF]:
             self.filler.request(task=self.filler.TASKS.VENT)
 
-        if req in [self.BUTTONS.CLEAN_DISPENSE]:
+        if req in [self.BUTTONS.CLEAN_DISPENSE_ON]:
             self.filler.request(task=self.filler.TASKS.DISPENSE, param=cleanDispenseTime)
 
+            # Start timing the dispense
+            self.cleaningTimer.start(milliseconds=cleanDispenseTime)
+
+        if req in [self.BUTTONS.CLEAN_DISPENSE_OFF]:
+            self.filler.request(task=self.filler.TASKS.DISPENSE, param=0)
+
+            # Stop the timer
+            self.cleaningTimer.expire()
+
+        # Special case: if the cleaning timer is running and we get to within 1 second of it timing
+        # out, restart the dispense and renew the timer
+        if not self.cleaningTimer.expired:
+            if self.cleaningTimer.remaining < 1000:
+                self.filler.request(task=self.filler.TASKS.DISPENSE, param=cleanDispenseTime)
+                self.cleaningTimer.start(milliseconds=cleanDispenseTime)
 
     def process_TERMINATE(self):
         """Nothing to do here (yet)"""
@@ -754,10 +776,11 @@ class MainWindow(QtWidgets.QMainWindow):
         b_clean_back              = QtWidgets.QToolButton          # type: QtWidgets.QToolButton
         b_clean_pressure_on       = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
         b_clean_pressure_off      = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
-        b_clean_dispense          = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        b_clean_dispense_on       = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
+        b_clean_dispense_off      = QtWidgets.QPushButton          # type: QtWidgets.QPushButton
 
         # Diagnostics panel
-        l_diag_foot_switch        = QtWidgets.QLabel               # type: QtWidgets.QLabel
+        l_diag_fill_switch        = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_diag_stop_switch        = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_diag_pressure_valve     = QtWidgets.QLabel               # type: QtWidgets.QLabel
         l_diag_pressure_value     = QtWidgets.QLabel               # type: QtWidgets.QLabel
@@ -909,19 +932,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.w.statusbar.addPermanentWidget(self.l_message, stretch=1)
 
         # Create the simulated I/O, but only add it to the form if enabled
-        self.b_foot_switch_simulate = QtWidgets.QPushButton('FOOT')
+        self.b_fill_switch_simulate = QtWidgets.QPushButton('FILL')
         self.b_stop_switch_simulate = QtWidgets.QPushButton('STOP')
         self.b_pressure_simulate = QtWidgets.QPushButton('PRES')
         self.b_weight_simulate = QtWidgets.QPushButton('WGT')
         self.b_stable_simulate = QtWidgets.QPushButton('STA')
 
         if simulate:
-            self.w.statusbar.addPermanentWidget(self.b_foot_switch_simulate, stretch=1)
+            self.w.statusbar.addPermanentWidget(self.b_fill_switch_simulate, stretch=1)
             self.w.statusbar.addPermanentWidget(self.b_stop_switch_simulate, stretch=1)
             self.w.statusbar.addPermanentWidget(self.b_pressure_simulate, stretch=1)
             self.w.statusbar.addPermanentWidget(self.b_weight_simulate, stretch=1)
             self.w.statusbar.addPermanentWidget(self.b_stable_simulate, stretch=1)
-            self.b_foot_switch_simulate.clicked.connect(self.buttonClicked)
+            self.b_fill_switch_simulate.clicked.connect(self.buttonClicked)
             self.b_stop_switch_simulate.clicked.connect(self.buttonClicked)
             self.b_pressure_simulate.clicked.connect(self.buttonClicked)
             self.b_weight_simulate.clicked.connect(self.buttonClicked)
@@ -940,7 +963,8 @@ class MainWindow(QtWidgets.QMainWindow):
             # Fill panel
             self.w.b_fill_back, self.w.b_fill_next,
             # Clean panel
-            self.w.b_clean_back, self.w.b_clean_pressure_on, self.w.b_clean_pressure_off, self.w.b_clean_dispense,
+            self.w.b_clean_back, self.w.b_clean_pressure_on, self.w.b_clean_pressure_off, self.w.b_clean_dispense_on,
+            self.w.b_clean_dispense_off,
             # Diagnostics panel
             self.w.b_diag_back, self.w.b_diag_sound_test, self.w.b_diag_pressure_on, self.w.b_diag_pressure_off,
             self.w.b_diag_dispense, self.w.b_diag_setup,
@@ -1065,13 +1089,13 @@ class MainWindow(QtWidgets.QMainWindow):
         # Update the widgets that display values from the filler device
         weight_val = self.filler.weight
         pressure_val = self.filler.pressure
-        foot_switch_val = ['OFF', 'ON'][self.filler.footswitch]
+        fill_switch_val = ['OFF', 'ON'][self.filler.fillswitch]
         stop_switch_val = ['OFF', 'ON'][self.filler.stopswitch]
 
         # Diagnostics page
         self.w.l_diag_weight_value.setText(f'{weight_val:03.2f} g')
         self.w.l_diag_pressure_value.setText(f'{pressure_val:03.1f} psi')
-        self.w.l_diag_foot_switch.setText(foot_switch_val)
+        self.w.l_diag_fill_switch.setText(fill_switch_val)
         self.w.l_diag_stop_switch.setText(stop_switch_val)
 
         # Display the pressure value as a progress bar
@@ -1080,6 +1104,30 @@ class MainWindow(QtWidgets.QMainWindow):
         # Update the max pressure scale
         max = self.config.getValue(CFG.DISPLAY_PRESSURE)
         self.w.pb_pressure.setMaximum(round(max))
+
+        # Clean page
+
+        # Style sheets for button backgrounds for on/off states
+        styleOn = 'color: rgb(0, 0, 255);\nbackground-color: rgb(255, 255, 127);'
+        styleOff = 'color: rgb(0, 0, 255);'
+
+        # Set the button backgrounds based on the valve states
+        if self.filler.pressureSwitch:
+            self.w.b_clean_pressure_on.setStyleSheet(styleOn)
+            self.w.b_clean_pressure_off.setStyleSheet(styleOff)
+        else:
+            self.w.b_clean_pressure_on.setStyleSheet(styleOff)
+            self.w.b_clean_pressure_off.setStyleSheet(styleOn)
+
+        if self.filler.dispenseSwitch:
+            self.w.b_clean_dispense_on.setStyleSheet(styleOn)
+            self.w.b_clean_dispense_off.setStyleSheet(styleOff)
+        else:
+            self.w.b_clean_dispense_on.setStyleSheet(styleOff)
+            self.w.b_clean_dispense_off.setStyleSheet(styleOn)
+
+
+
 
     def play(self):
         x = random.random()
@@ -1148,8 +1196,11 @@ class MainWindow(QtWidgets.QMainWindow):
         elif origin == self.w.b_clean_pressure_off:
             self.seq.request(buttons.CLEAN_PRESSURE_OFF)
 
-        elif origin == self.w.b_clean_dispense:
-            self.seq.request(buttons.CLEAN_DISPENSE)
+        elif origin == self.w.b_clean_dispense_on:
+            self.seq.request(buttons.CLEAN_DISPENSE_ON)
+
+        elif origin == self.w.b_clean_dispense_off:
+            self.seq.request(buttons.CLEAN_DISPENSE_OFF)
 
         # Diagnostics related buttons
         elif origin == self.w.b_diag_back:
@@ -1181,8 +1232,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.seq.request(buttons.EXIT)
 
         # Simulated I/O buttons
-        elif origin == self.b_foot_switch_simulate:
-            self.filler.simulateFootswitch(True)
+        elif origin == self.b_fill_switch_simulate:
+            self.filler.simulateFillswitch(True)
 
         elif origin == self.b_stop_switch_simulate:
 
