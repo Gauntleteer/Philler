@@ -1108,8 +1108,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # Clean page
 
         # Style sheets for button backgrounds for on/off states
-        styleOn = 'color: rgb(0, 0, 255);\nbackground-color: rgb(255, 255, 127);'
-        styleOff = 'color: rgb(0, 0, 255);'
+        styleOn = 'color: rgb(0, 0, 255); border: 20px solid rgb(255, 255, 127);'
+        styleOff = 'color: rgb(0, 0, 255); border: 20px solid rgba(128, 128, 128, 64);'
 
         # Set the button backgrounds based on the valve states
         if self.filler.pressureSwitch:
