@@ -657,7 +657,7 @@ class FillingSequencer(Sequencer):
                 with open('fillog.txt', 'a') as filllog:
 
                     now = datetime.datetime.now().isoformat()
-                    out = f'{now},{self.filler.weight:0.2f}\n'
+                    out = f'{now},{actualWeight:0.2f},{self.filler.weight:0.2f}\n'
                     filllog.write(out)
 
                 if actualWeight >= minFillWeight:
