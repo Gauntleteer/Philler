@@ -342,7 +342,7 @@ class FillingSequencer(Sequencer):
 
         # Advance to the next state when the pressure is over 20
         if self.filler.pressure >= self.config.getValue(CFG.FILL_PRESSURE):
-            self.to_FILL_PURGE_SETUP()
+            self.to_FILL_PURGE_INIT()
 
         # Handle the abort/exit buttons or stop switch
         req = self.getRequest()
